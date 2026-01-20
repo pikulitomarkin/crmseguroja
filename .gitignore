@@ -1,0 +1,40 @@
+# Ambiente
+.env
+.env.local
+.env.*.local
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# Cache
+.streamlit/
+.cache/
+
+# System
+.DS_Store
+Thumbs.db
