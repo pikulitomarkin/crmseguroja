@@ -280,9 +280,8 @@ async def get_leads_stats():
     """Retorna estatísticas de leads"""
     try:
         db = get_session(engine)
-        lead_service = LeadService(db)
         
-        leads = db.query(lead_service.model).all()
+        leads = db.query(Lead).all()
         today = datetime.now().date()
         
         stats = {
@@ -307,18 +306,14 @@ async def get_leads_stats():
 async def get_leads(status: Optional[str] = None, limit: int = 50):
     """Retorna lista de leads"""
     try:
-        from datetime import datetime
-        from typing import Optional
-        
         db = get_session(engine)
-        lead_service = LeadService(db)
         
-        query = db.query(lead_service.model)
+        query = db.query(Lead)
         
         if status:
-            query = query.filter(lead_service.model.status == status)
+            query = query.filter(Lead.status == status)
         
-        leads = query.order_by(lead_service.model.created_at.desc()).limit(limit).all()
+        leads = query.order_by(Lead.created_at.desc()).limit(limit).all()
         
         result = []
         for lead in leads:
@@ -350,11 +345,10 @@ async def get_lead_messages(lead_id: int):
         
         messages = db.query(message_service.model).filter(
             message_service.model.lead_id == lead_id
-        ).order_by(message_service.model.created_at.asc()).all()
         
-        result = []
-        for msg in messages:
-            result.append({
+        messages = db.query(ChatMessage).filter(
+            ChatMessage.lead_id == lead_id
+        ).order_by(ChatMessage
                 "id": msg.id,
                 "lead_id": msg.lead_id,
                 "sender": msg.sender,
