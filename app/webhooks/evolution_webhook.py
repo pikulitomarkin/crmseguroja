@@ -222,11 +222,14 @@ async def process_message(whatsapp_number: str, message_text: str):
             # Desativa IA
             LeadService.mark_qualified(db, lead)
             
-            # Notifica admin
-            await notification_service.notify_admin_lead_qualified(
-                extracted_data,
-                whatsapp_number
-            )
+            # Notifica admin (não-bloqueante)
+            try:
+                await notification_service.notify_admin_lead_qualified(
+                    extracted_data,
+                    whatsapp_number
+                )
+            except Exception as e:
+                logger.error(f"Erro ao notificar admin: {str(e)}")
             
             # Envia mensagem de finalização ao cliente
             final_message = (
@@ -234,8 +237,12 @@ async def process_message(whatsapp_number: str, message_text: str):
                 "Um consultor especializado entrará em contato em breve para discutir "
                 "as melhores soluções para você. Muito obrigado!"
             )
-            evolution_service = get_evolution_service()
-            await evolution_service.send_message(whatsapp_number, final_message)
+            
+            try:
+                evolution_service = get_evolution_service()
+                await evolution_service.send_message(whatsapp_number, final_message)
+            except Exception as e:
+                logger.error(f"Erro ao enviar mensagem final: {str(e)}")
             
             return
         
