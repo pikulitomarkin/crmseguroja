@@ -15,8 +15,8 @@ class AIService:
         try:
             self.client = OpenAI(
                 api_key=settings.OPENAI_API_KEY,
-                timeout=30.0,
-                max_retries=2
+                timeout=15.0,  # Reduzido de 30s para 15s
+                max_retries=1  # Reduzido de 2 para 1
             )
             self.model = settings.OPENAI_MODEL
         except Exception as e:

@@ -175,13 +175,17 @@ async def process_message(whatsapp_number: str, message_text: str):
         whatsapp_number: Número WhatsApp do remetente
         message_text: Conteúdo da mensagem
     """
+    import time
+    start_time = time.time()
     db = get_session(engine)
     notification_service = NotificationService(db)
     
     try:
+        logger.info(f"[{whatsapp_number}] Iniciando processamento: '{message_text[:50]}'")
+        
         # 1. Verifica se IA ainda deve responder
         if not LeadService.is_ia_active(db, whatsapp_number):
-            logger.info(f"IA desativada para {whatsapp_number}")
+            logger.info(f"[{whatsapp_number}] IA desativada - mensagem ignorada")
             return
         
         # 2. Cria ou recupera lead
@@ -307,12 +311,14 @@ async def process_message(whatsapp_number: str, message_text: str):
         try:
             evolution_service = get_evolution_service()
             await evolution_service.send_message(whatsapp_number, ai_response)
-            logger.info(f"Mensagem processada e enviada para {whatsapp_number}")
+            elapsed = time.time() - start_time
+            logger.info(f"[{whatsapp_number}] ✅ Processado em {elapsed:.2f}s")
         except Exception as e:
-            logger.error(f"Erro ao enviar resposta: {str(e)}")
+            logger.error(f"[{whatsapp_number}] Erro ao enviar resposta: {str(e)}")
     
     except Exception as e:
-        logger.error(f"Erro ao processar mensagem: {str(e)}")
+        elapsed = time.time() - start_time
+        logger.error(f"[{whatsapp_number}] ❌ Erro após {elapsed:.2f}s: {str(e)}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         try:
