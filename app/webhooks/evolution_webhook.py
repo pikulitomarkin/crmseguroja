@@ -8,7 +8,7 @@ from datetime import datetime
 import asyncio
 import logging
 from config.settings import settings
-from app.database.models import init_db, get_session
+from app.database.models import init_db, get_session, Lead, ChatMessage
 from app.services.ai_service import AIService
 from app.services.evolution_service import EvolutionService
 from app.services.notification_service import NotificationService
