@@ -12,8 +12,15 @@ class AIService:
     """Serviço para interagir com OpenAI API"""
     
     def __init__(self):
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model = settings.OPENAI_MODEL
+        try:
+            self.client = OpenAI(
+                api_key=settings.OPENAI_API_KEY,
+                timeout=30.0,
+                max_retries=2
+            )
+            self.model = settings.OPENAI_MODEL
+        except Exception as e:
+            raise Exception(f"Erro ao inicializar OpenAI: {str(e)}")
     
     def get_response(
         self,

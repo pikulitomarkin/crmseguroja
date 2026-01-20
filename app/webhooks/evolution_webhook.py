@@ -29,10 +29,18 @@ app = FastAPI(
 # Inicializa banco de dados
 engine = init_db(settings.DATABASE_URL)
 
-# Inicializa serviços
-ai_service = AIService()
-evolution_service = EvolutionService()
-qualification_engine = QualificationEngine()
+# Serviços serão inicializados quando necessário
+def get_ai_service():
+    """Lazy initialization do AI Service"""
+    return AIService()
+
+def get_evolution_service():
+    """Lazy initialization do Evolution Service"""
+    return EvolutionService()
+
+def get_qualification_engine():
+    """Lazy initialization do Qualification Engine"""
+    return QualificationEngine()
 
 
 @app.get("/")
@@ -136,6 +144,7 @@ async def process_message(whatsapp_number: str, message_text: str):
             return
         
         # 2. Cria ou recupera lead
+        qualification_engine = get_qualification_engine()
         customer_type = qualification_engine.classify_customer([
             {"content": message_text}
         ])
@@ -148,6 +157,7 @@ async def process_message(whatsapp_number: str, message_text: str):
         
         # 4. Extrai dados de qualificação
         conversation = MessageService.get_conversation_history(db, whatsapp_number)
+        ai_service = get_ai_service()
         extracted_data = ai_service.extract_qualification_data(conversation)
         
         # Atualiza lead com dados extraídos
@@ -193,6 +203,7 @@ async def process_message(whatsapp_number: str, message_text: str):
                 "Um consultor especializado entrará em contato em breve para discutir "
                 "as melhores soluções para você. Muito obrigado!"
             )
+            evolution_service = get_evolution_service()
             await evolution_service.send_message(whatsapp_number, final_message)
             
             return
@@ -210,6 +221,8 @@ async def process_message(whatsapp_number: str, message_text: str):
         )
         
         # 8. Envia resposta via WhatsApp
+        if not evolution_service:
+            evolution_service = get_evolution_service()
         await evolution_service.send_message(whatsapp_number, ai_response)
         
         logger.info(f"Mensagem processada e enviada para {whatsapp_number}")
@@ -217,6 +230,8 @@ async def process_message(whatsapp_number: str, message_text: str):
     except Exception as e:
         logger.error(f"Erro ao processar mensagem: {str(e)}")
         try:
+            if not evolution_service:
+                evolution_service = get_evolution_service()
             await evolution_service.send_message(
                 whatsapp_number,
                 "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente."
