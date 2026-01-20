@@ -3,6 +3,8 @@ FastAPI Webhook para integração com Evolution API
 """
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
+from typing import Optional
+from datetime import datetime
 import asyncio
 import logging
 from config.settings import settings
@@ -85,17 +87,28 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks, e
     """
     try:
         payload = await request.json()
-        logger.info(f"Webhook recebido [{event_type}]: {payload.get('event', 'unknown')}")
+        event = payload.get('event', 'unknown')
+        logger.info(f"Webhook recebido [{event_type}]: {event}")
         
-        # Processa apenas eventos de mensagens recebidas
-        if event_type and "messages-upsert" not in event_type:
+        # Ignora eventos que não são mensagens
+        if event not in ['messages.upsert', 'messages-upsert']:
             return JSONResponse(
-                {"status": "ok", "message": f"Event {event_type} ignored"},
+                {"status": "ok", "message": f"Event {event} ignored"},
                 status_code=200
             )
         
         # Extrai dados da mensagem
         data = payload.get("data", {})
+        
+        # Se data for lista, pega o primeiro item
+        if isinstance(data, list):
+            if not data:
+                return JSONResponse(
+                    {"status": "ok", "message": "Empty data list"},
+                    status_code=200
+                )
+            data = data[0]
+        
         instance = data.get("instanceId", "")
         message = data.get("message", {})
         
@@ -253,6 +266,102 @@ async def process_message(whatsapp_number: str, message_text: str):
     
     finally:
         db.close()
+
+
+# ==================== ROTAS DE API PARA DASHBOARD ====================
+
+@app.get("/api/leads/stats")
+async def get_leads_stats():
+    """Retorna estatísticas de leads"""
+    try:
+        db = next(get_session())
+        lead_service = LeadService(db)
+        
+        leads = db.query(lead_service.model).all()
+        today = datetime.now().date()
+        
+        stats = {
+            "total_leads": len(leads),
+            "novos_hoje": len([l for l in leads if l.created_at.date() == today]),
+            "qualificados": len([l for l in leads if l.status == "qualificado"]),
+            "em_negociacao": len([l for l in leads if l.status == "em_negociacao"]),
+            "convertidos": len([l for l in leads if l.status == "convertido"]),
+            "perdidos": len([l for l in leads if l.status == "perdido"]),
+            "taxa_qualificacao": (len([l for l in leads if l.status == "qualificado"]) / len(leads) * 100) if leads else 0,
+            "taxa_conversao": (len([l for l in leads if l.status == "convertido"]) / len(leads) * 100) if leads else 0
+        }
+        
+        db.close()
+        return stats
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas: {str(e)}")
+        return {"error": str(e)}
+
+
+@app.get("/api/leads")
+async def get_leads(status: Optional[str] = None, limit: int = 50):
+    """Retorna lista de leads"""
+    try:
+        from datetime import datetime
+        from typing import Optional
+        
+        db = next(get_session())
+        lead_service = LeadService(db)
+        
+        query = db.query(lead_service.model)
+        
+        if status:
+            query = query.filter(lead_service.model.status == status)
+        
+        leads = query.order_by(lead_service.model.created_at.desc()).limit(limit).all()
+        
+        result = []
+        for lead in leads:
+            result.append({
+                "id": lead.id,
+                "name": lead.name,
+                "whatsapp_number": lead.whatsapp_number,
+                "email": lead.email,
+                "status": lead.status,
+                "qualification_score": lead.qualification_score,
+                "qualification_data": lead.qualification_data,
+                "created_at": lead.created_at.isoformat() if lead.created_at else None,
+                "updated_at": lead.updated_at.isoformat() if lead.updated_at else None
+            })
+        
+        db.close()
+        return result
+    except Exception as e:
+        logger.error(f"Erro ao buscar leads: {str(e)}")
+        return []
+
+
+@app.get("/api/leads/{lead_id}/messages")
+async def get_lead_messages(lead_id: int):
+    """Retorna mensagens de um lead"""
+    try:
+        db = next(get_session())
+        message_service = MessageService(db)
+        
+        messages = db.query(message_service.model).filter(
+            message_service.model.lead_id == lead_id
+        ).order_by(message_service.model.created_at.asc()).all()
+        
+        result = []
+        for msg in messages:
+            result.append({
+                "id": msg.id,
+                "lead_id": msg.lead_id,
+                "sender": msg.sender,
+                "message": msg.message,
+                "created_at": msg.created_at.isoformat() if msg.created_at else None
+            })
+        
+        db.close()
+        return result
+    except Exception as e:
+        logger.error(f"Erro ao buscar mensagens: {str(e)}")
+        return []
 
 
 if __name__ == "__main__":
