@@ -7,6 +7,7 @@ from typing import Optional
 from datetime import datetime
 import asyncio
 import logging
+from sqlalchemy import text
 from config.settings import settings
 from app.database.models import init_db, get_session, Lead, ChatMessage
 from app.services.ai_service import AIService
@@ -61,7 +62,7 @@ async def health():
     try:
         # Testa conexão com o banco
         db = get_session(engine)
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         db_status = "connected"
     except Exception as e:
