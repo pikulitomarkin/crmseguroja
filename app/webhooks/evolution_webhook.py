@@ -279,7 +279,7 @@ async def process_message(whatsapp_number: str, message_text: str):
 async def get_leads_stats():
     """Retorna estatísticas de leads"""
     try:
-        db = next(get_session())
+        db = get_session(engine)
         lead_service = LeadService(db)
         
         leads = db.query(lead_service.model).all()
@@ -310,7 +310,7 @@ async def get_leads(status: Optional[str] = None, limit: int = 50):
         from datetime import datetime
         from typing import Optional
         
-        db = next(get_session())
+        db = get_session(engine)
         lead_service = LeadService(db)
         
         query = db.query(lead_service.model)
@@ -345,7 +345,7 @@ async def get_leads(status: Optional[str] = None, limit: int = 50):
 async def get_lead_messages(lead_id: int):
     """Retorna mensagens de um lead"""
     try:
-        db = next(get_session())
+        db = get_session(engine)
         message_service = MessageService(db)
         
         messages = db.query(message_service.model).filter(
