@@ -5,55 +5,45 @@ Script para iniciar webhook e dashboard simultaneamente
 import os
 import sys
 import subprocess
-import signal
-from multiprocessing import Process
-
-def start_webhook():
-    """Inicia o servidor webhook FastAPI"""
-    port = os.getenv("PORT", "8000")
-    print(f"🚀 Iniciando webhook na porta {port}...")
-    subprocess.run([
-        sys.executable, "-m", "uvicorn",
-        "app.webhooks.evolution_webhook:app",
-        "--host", "0.0.0.0",
-        "--port", port
-    ])
+import threading
+import time
 
 def start_dashboard():
-    """Inicia o dashboard Streamlit"""
+    """Inicia o dashboard Streamlit em background"""
     dashboard_port = os.getenv("DASHBOARD_PORT", "8501")
     print(f"📊 Iniciando dashboard na porta {dashboard_port}...")
-    subprocess.run([
-        sys.executable, "-m", "streamlit",
-        "run", "dashboard/app.py",
-        "--server.port", dashboard_port,
-        "--server.address", "0.0.0.0",
-        "--server.headless", "true"
-    ])
+    try:
+        subprocess.run([
+            sys.executable, "-m", "streamlit",
+            "run", "dashboard/app.py",
+            "--server.port", dashboard_port,
+            "--server.address", "0.0.0.0",
+            "--server.headless", "true",
+            "--server.enableCORS", "false",
+            "--server.enableXsrfProtection", "false"
+        ])
+    except Exception as e:
+        print(f"❌ Erro ao iniciar dashboard: {e}")
 
 if __name__ == "__main__":
     print("=" * 60)
     print("🎯 CRM WhatsApp - Iniciando sistema completo")
     print("=" * 60)
     
-    # Inicia webhook em processo principal
-    webhook_process = Process(target=start_webhook)
+    # Inicia dashboard em thread separada
+    dashboard_thread = threading.Thread(target=start_dashboard, daemon=True)
+    dashboard_thread.start()
     
-    # Inicia dashboard em processo separado
-    dashboard_process = Process(target=start_dashboard)
+    # Aguarda 3 segundos para dashboard iniciar
+    time.sleep(3)
     
-    try:
-        webhook_process.start()
-        dashboard_process.start()
-        
-        # Aguarda os processos
-        webhook_process.join()
-        dashboard_process.join()
-        
-    except KeyboardInterrupt:
-        print("\n🛑 Encerrando sistema...")
-        webhook_process.terminate()
-        dashboard_process.terminate()
-        webhook_process.join()
-        dashboard_process.join()
-        sys.exit(0)
+    # Inicia webhook no processo principal (Railway precisa disso)
+    port = os.getenv("PORT", "8000")
+    print(f"🚀 Iniciando webhook na porta {port}...")
+    
+    os.execvp(sys.executable, [
+        sys.executable, "-m", "uvicorn",
+        "app.webhooks.evolution_webhook:app",
+        "--host", "0.0.0.0",
+        "--port", port
+    ])
