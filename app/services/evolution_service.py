@@ -11,7 +11,11 @@ class EvolutionService:
     """Serviço para interagir com Evolution API"""
     
     def __init__(self):
-        self.base_url = settings.EVOLUTION_API_URL
+        base_url = settings.EVOLUTION_API_URL
+        # Garante que a URL tenha o protocolo https://
+        if not base_url.startswith('http://') and not base_url.startswith('https://'):
+            base_url = f'https://{base_url}'
+        self.base_url = base_url
         self.api_key = settings.EVOLUTION_API_KEY
         self.instance_name = settings.EVOLUTION_INSTANCE_NAME
     
