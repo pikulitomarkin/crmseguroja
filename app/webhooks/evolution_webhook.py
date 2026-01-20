@@ -110,22 +110,28 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks, e
             data = data[0]
         
         instance = data.get("instanceId", "")
-        message = data.get("message", {})
         
-        if not message:
-            return JSONResponse(
-                {"status": "ok", "message": "No message data"},
-                status_code=200
+        # A Evolution API pode enviar em dois formatos:
+        # Formato 1: data.message contém key e message
+        # Formato 2: data contém key e message diretamente
+        if "message" in data and isinstance(data["message"], dict) and "key" in data["message"]:
+            # Formato 1: data.message.key e data.message.message
+            message_obj = data.get("message", {})
+            whatsapp_number = message_obj.get("key", {}).get("remoteJid", "").split("@")[0]
+            message_text = (
+                message_obj.get("message", {}).get("conversation", "") or
+                message_obj.get("message", {}).get("extendedTextMessage", {}).get("text", "")
+            )
+        else:
+            # Formato 2: data.key e data.message diretamente
+            whatsapp_number = data.get("key", {}).get("remoteJid", "").split("@")[0]
+            message_text = (
+                data.get("message", {}).get("conversation", "") or
+                data.get("message", {}).get("extendedTextMessage", {}).get("text", "")
             )
         
-        # Extrai número e conteúdo
-        whatsapp_number = message.get("key", {}).get("remoteJid", "").split("@")[0]
-        message_text = (
-            message.get("message", {}).get("conversation", "") or
-            message.get("message", {}).get("extendedTextMessage", {}).get("text", "")
-        )
-        
         if not whatsapp_number or not message_text:
+            logger.info(f"Mensagem ignorada - whatsapp: {whatsapp_number}, texto: {message_text}")
             return JSONResponse(
                 {"status": "ok", "message": "Invalid message format"},
                 status_code=200
