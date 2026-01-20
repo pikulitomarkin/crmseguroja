@@ -341,14 +341,14 @@ async def get_lead_messages(lead_id: int):
     """Retorna mensagens de um lead"""
     try:
         db = get_session(engine)
-        message_service = MessageService(db)
-        
-        messages = db.query(message_service.model).filter(
-            message_service.model.lead_id == lead_id
         
         messages = db.query(ChatMessage).filter(
             ChatMessage.lead_id == lead_id
-        ).order_by(ChatMessage
+        ).order_by(ChatMessage.created_at.asc()).all()
+        
+        result = []
+        for msg in messages:
+            result.append({
                 "id": msg.id,
                 "lead_id": msg.lead_id,
                 "sender": msg.sender,
