@@ -349,25 +349,34 @@ async def get_leads(status: Optional[str] = None, limit: int = 50):
             query = query.filter(Lead.status == status)
         
         leads = query.order_by(Lead.created_at.desc()).limit(limit).all()
+        logger.info(f"Encontrados {len(leads)} leads no banco de dados")
         
         result = []
         for lead in leads:
-            result.append({
-                "id": lead.id,
-                "name": lead.name,
-                "whatsapp_number": lead.whatsapp_number,
-                "email": lead.email,
-                "status": lead.status,
-                "qualification_score": lead.qualification_score,
-                "qualification_data": lead.qualification_data,
-                "created_at": lead.created_at.isoformat() if lead.created_at else None,
-                "updated_at": lead.updated_at.isoformat() if lead.updated_at else None
-            })
+            try:
+                lead_dict = {
+                    "id": lead.id,
+                    "name": lead.name or "Aguardando qualificação",
+                    "whatsapp_number": lead.whatsapp_number,
+                    "email": lead.email,
+                    "status": lead.status,
+                    "qualification_score": int(lead.qualification_score) if lead.qualification_score else 0,
+                    "qualification_data": lead.qualification_data if lead.qualification_data else {},
+                    "created_at": lead.created_at.isoformat() if lead.created_at else None,
+                    "updated_at": lead.updated_at.isoformat() if lead.updated_at else None
+                }
+                result.append(lead_dict)
+            except Exception as e:
+                logger.error(f"Erro ao serializar lead {lead.id}: {str(e)}")
+                continue
         
         db.close()
+        logger.info(f"Retornando {len(result)} leads serializados")
         return result
     except Exception as e:
         logger.error(f"Erro ao buscar leads: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return []
 
 
