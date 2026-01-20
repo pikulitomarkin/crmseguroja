@@ -58,10 +58,20 @@ async def root():
 @app.get("/health")
 async def health():
     """Health check endpoint"""
+    try:
+        # Testa conexão com o banco
+        db = get_session(engine)
+        db.execute("SELECT 1")
+        db.close()
+        db_status = "connected"
+    except Exception as e:
+        logger.error(f"Health check DB error: {str(e)}")
+        db_status = "error"
+    
     return {
-        "status": "healthy",
-        "database": "connected",
-        "timestamp": asyncio.get_event_loop().time()
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "database": db_status,
+        "timestamp": datetime.now().isoformat()
     }
 
 
@@ -249,18 +259,22 @@ async def process_message(whatsapp_number: str, message_text: str):
                 logger.error(f"Erro ao enviar mensagem final: {str(e)}")
             
             # 3. Notifica admin em BACKGROUND (não-bloqueante)
-            async def notify_admin_background():
+            async def notify_admin_background(service, data, number):
                 try:
-                    await notification_service.notify_admin_lead_qualified(
-                        extracted_data,
-                        whatsapp_number
-                    )
-                    logger.info(f"Admin notificado sobre lead {whatsapp_number}")
+                    await service.notify_admin_lead_qualified(data, number)
+                    logger.info(f"Admin notificado sobre lead {number}")
                 except Exception as e:
                     logger.error(f"Erro ao notificar admin (background): {str(e)}")
+                    import traceback
+                    logger.error(traceback.format_exc())
             
             # Agenda notificação para rodar em background
-            asyncio.create_task(notify_admin_background())
+            try:
+                asyncio.create_task(
+                    notify_admin_background(notification_service, extracted_data, whatsapp_number)
+                )
+            except Exception as e:
+                logger.error(f"Erro ao criar task de notificação: {str(e)}")
             
             return
         
@@ -313,6 +327,7 @@ async def process_message(whatsapp_number: str, message_text: str):
 @app.get("/api/leads/stats")
 async def get_leads_stats():
     """Retorna estatísticas de leads"""
+    db = None
     try:
         db = get_session(engine)
         
@@ -330,16 +345,19 @@ async def get_leads_stats():
             "taxa_conversao": (len([l for l in leads if l.status == "convertido"]) / len(leads) * 100) if leads else 0
         }
         
-        db.close()
         return stats
     except Exception as e:
         logger.error(f"Erro ao buscar estatísticas: {str(e)}")
         return {"error": str(e)}
+    finally:
+        if db:
+            db.close()
 
 
 @app.get("/api/leads")
 async def get_leads(status: Optional[str] = None, limit: int = 50):
     """Retorna lista de leads"""
+    db = None
     try:
         db = get_session(engine)
         
@@ -370,7 +388,6 @@ async def get_leads(status: Optional[str] = None, limit: int = 50):
                 logger.error(f"Erro ao serializar lead {lead.id}: {str(e)}")
                 continue
         
-        db.close()
         logger.info(f"Retornando {len(result)} leads serializados")
         return result
     except Exception as e:
@@ -378,11 +395,15 @@ async def get_leads(status: Optional[str] = None, limit: int = 50):
         import traceback
         logger.error(traceback.format_exc())
         return []
+    finally:
+        if db:
+            db.close()
 
 
 @app.get("/api/leads/{lead_id}/messages")
 async def get_lead_messages(lead_id: int):
     """Retorna mensagens de um lead"""
+    db = None
     try:
         db = get_session(engine)
         
@@ -400,11 +421,13 @@ async def get_lead_messages(lead_id: int):
                 "created_at": msg.created_at.isoformat() if msg.created_at else None
             })
         
-        db.close()
         return result
     except Exception as e:
         logger.error(f"Erro ao buscar mensagens: {str(e)}")
         return []
+    finally:
+        if db:
+            db.close()
 
 
 if __name__ == "__main__":
