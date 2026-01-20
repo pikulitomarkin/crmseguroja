@@ -219,30 +219,45 @@ async def process_message(whatsapp_number: str, message_text: str):
         if should_transfer:
             logger.info(f"Transferindo lead {whatsapp_number}: {reason}")
             
-            # Desativa IA
-            LeadService.mark_qualified(db, lead)
-            
-            # Notifica admin (não-bloqueante)
+            # 1. Atualiza status do lead no banco (CRÍTICO - deve acontecer primeiro)
             try:
-                await notification_service.notify_admin_lead_qualified(
-                    extracted_data,
-                    whatsapp_number
-                )
+                LeadService.mark_qualified(db, lead)
+                db.commit()
+                logger.info(f"Lead {whatsapp_number} marcado como qualificado no banco")
             except Exception as e:
-                logger.error(f"Erro ao notificar admin: {str(e)}")
+                logger.error(f"Erro ao atualizar status do lead: {str(e)}")
             
-            # Envia mensagem de finalização ao cliente
+            # 2. Envia mensagem de finalização ao cliente (PRIORITÁRIO)
             final_message = (
-                "Perfeito! 😊 Coletei todas as informações. "
-                "Um consultor especializado entrará em contato em breve para discutir "
-                "as melhores soluções para você. Muito obrigado!"
+                "Perfeito! 😊 Coletei todas as informações necessárias.\n\n"
+                "📋 *Dados confirmados:*\n"
+                f"• Nome: {extracted_data.get('name', 'Não informado')}\n"
+                f"• Email: {extracted_data.get('email', 'Não informado')}\n"
+                f"• Interesse: {extracted_data.get('interest', 'Não informado')}\n\n"
+                "Um consultor especializado da Seguro JA entrará em contato em breve para discutir "
+                "as melhores soluções para você. Muito obrigado! 🙏"
             )
             
             try:
                 evolution_service = get_evolution_service()
                 await evolution_service.send_message(whatsapp_number, final_message)
+                logger.info(f"Mensagem final enviada para {whatsapp_number}")
             except Exception as e:
                 logger.error(f"Erro ao enviar mensagem final: {str(e)}")
+            
+            # 3. Notifica admin em BACKGROUND (não-bloqueante)
+            async def notify_admin_background():
+                try:
+                    await notification_service.notify_admin_lead_qualified(
+                        extracted_data,
+                        whatsapp_number
+                    )
+                    logger.info(f"Admin notificado sobre lead {whatsapp_number}")
+                except Exception as e:
+                    logger.error(f"Erro ao notificar admin (background): {str(e)}")
+            
+            # Agenda notificação para rodar em background
+            asyncio.create_task(notify_admin_background())
             
             return
         
