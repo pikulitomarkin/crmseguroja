@@ -247,28 +247,38 @@ async def process_message(whatsapp_number: str, message_text: str):
             return
         
         # 6. Gera resposta da IA
-        ai_response = ai_service.get_response(
-            user_message=message_text,
-            conversation_history=conversation,
-            customer_type=customer_type
-        )
+        try:
+            ai_response = ai_service.get_response(
+                user_message=message_text,
+                conversation_history=conversation,
+                customer_type=customer_type
+            )
+        except Exception as e:
+            logger.error(f"Erro ao gerar resposta IA: {str(e)}")
+            ai_response = "Desculpe, tive um problema técnico. Pode repetir sua mensagem?"
         
         # 7. Salva resposta da IA
-        MessageService.save_message(
-            db, whatsapp_number, "ai", ai_response, role="assistant"
-        )
+        try:
+            MessageService.save_message(
+                db, whatsapp_number, "ai", ai_response, role="assistant"
+            )
+        except Exception as e:
+            logger.error(f"Erro ao salvar mensagem IA: {str(e)}")
         
         # 8. Envia resposta via WhatsApp
-        evolution_service = get_evolution_service()
-        await evolution_service.send_message(whatsapp_number, ai_response)
-        
-        logger.info(f"Mensagem processada e enviada para {whatsapp_number}")
+        try:
+            evolution_service = get_evolution_service()
+            await evolution_service.send_message(whatsapp_number, ai_response)
+            logger.info(f"Mensagem processada e enviada para {whatsapp_number}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar resposta: {str(e)}")
     
     except Exception as e:
         logger.error(f"Erro ao processar mensagem: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         try:
-            if not evolution_service:
-                evolution_service = get_evolution_service()
+            evolution_service = get_evolution_service()
             await evolution_service.send_message(
                 whatsapp_number,
                 "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente."
