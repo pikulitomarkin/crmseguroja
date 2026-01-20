@@ -17,8 +17,11 @@ class Lead(Base):
     id = Column(Integer, primary_key=True, index=True)
     whatsapp_number = Column(String(20), unique=True, index=True)
     name = Column(String(150), nullable=True)
+    email = Column(String(150), nullable=True)
     interest = Column(Text, nullable=True)
     necessity = Column(Text, nullable=True)
+    qualification_score = Column(Float, default=0)
+    qualification_data = Column(Text, nullable=True)  # JSON string
     status = Column(String(50), default="novo")  # novo, qualificado, em_atendimento, finalizado
     status_ia = Column(Integer, default=1)  # 1 = IA ativa, 0 = IA inativa (humano assumiu)
     customer_type = Column(String(20), default="novo")  # novo, existente

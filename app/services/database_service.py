@@ -83,6 +83,7 @@ class LeadService:
     def mark_qualified(
         db: Session,
         lead: Lead,
+        qualification_score: int = 100,
         attended_by: str = "IA"
     ) -> Lead:
         """
@@ -91,6 +92,7 @@ class LeadService:
         Args:
             db: Sessão do banco de dados
             lead: Objeto Lead
+            qualification_score: Pontuação de qualificação (padrão: 100)
             attended_by: Quem qualificou (padrão: "IA")
         
         Returns:
@@ -101,6 +103,7 @@ class LeadService:
             lead,
             status="qualificado",
             status_ia=0,  # Desativa IA
+            qualification_score=qualification_score,
             qualified_at=datetime.utcnow(),
             attended_by=attended_by
         )

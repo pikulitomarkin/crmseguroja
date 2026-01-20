@@ -208,6 +208,12 @@ async def process_message(whatsapp_number: str, message_text: str):
                 db, whatsapp_number, has_name=True
             )
         
+        if extracted_data.get("email"):
+            LeadService.update_lead(db, lead, email=extracted_data["email"])
+            QualificationFieldService.update_fields(
+                db, whatsapp_number, has_email=True
+            )
+        
         if extracted_data.get("interest"):
             LeadService.update_lead(db, lead, interest=extracted_data["interest"])
             QualificationFieldService.update_fields(
