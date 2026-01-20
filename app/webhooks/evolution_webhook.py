@@ -63,6 +63,18 @@ async def health():
     }
 
 
+@app.get(f"{settings.API_WEBHOOK_PATH}/{{event_type:path}}")
+@app.get(settings.API_WEBHOOK_PATH)
+async def webhook_get_handler(event_type: str = ""):
+    """
+    GET handler para validação do webhook pela Evolution API
+    """
+    return JSONResponse(
+        {"status": "ok", "message": "Webhook is active", "event_type": event_type},
+        status_code=200
+    )
+
+
 @app.post(f"{settings.API_WEBHOOK_PATH}/{{event_type:path}}")
 @app.post(settings.API_WEBHOOK_PATH)
 async def webhook_handler(request: Request, background_tasks: BackgroundTasks, event_type: str = ""):
