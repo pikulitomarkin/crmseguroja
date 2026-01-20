@@ -252,8 +252,7 @@ async def process_message(whatsapp_number: str, message_text: str):
         )
         
         # 8. Envia resposta via WhatsApp
-        if not evolution_service:
-            evolution_service = get_evolution_service()
+        evolution_service = get_evolution_service()
         await evolution_service.send_message(whatsapp_number, ai_response)
         
         logger.info(f"Mensagem processada e enviada para {whatsapp_number}")
