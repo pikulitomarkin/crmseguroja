@@ -65,7 +65,8 @@ class EvolutionService:
                     if response.status in [200, 201]:
                         return True
                     else:
-                        print(f"Erro ao enviar mensagem: {response.status}")
+                        error_text = await response.text()
+                        print(f"Erro ao enviar mensagem: {response.status} - {error_text}")
                         return False
         
         except Exception as e:

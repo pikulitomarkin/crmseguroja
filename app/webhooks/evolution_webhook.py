@@ -228,14 +228,17 @@ async def process_message(whatsapp_number: str, message_text: str):
                 logger.error(f"Erro ao atualizar status do lead: {str(e)}")
             
             # 2. Envia mensagem de finalização ao cliente (PRIORITÁRIO)
+            nome = extracted_data.get('name', 'cliente')
+            email = extracted_data.get('email', 'não informado')
+            interesse = extracted_data.get('interest', 'seguro')
+            
             final_message = (
-                "Perfeito! 😊 Coletei todas as informações necessárias.\n\n"
-                "📋 *Dados confirmados:*\n"
-                f"• Nome: {extracted_data.get('name', 'Não informado')}\n"
-                f"• Email: {extracted_data.get('email', 'Não informado')}\n"
-                f"• Interesse: {extracted_data.get('interest', 'Não informado')}\n\n"
-                "Um consultor especializado da Seguro JA entrará em contato em breve para discutir "
-                "as melhores soluções para você. Muito obrigado! 🙏"
+                f"Perfeito, {nome}! Coletei todas as informações necessárias.\n\n"
+                f"Dados confirmados:\n"
+                f"Nome: {nome}\n"
+                f"Email: {email}\n"
+                f"Interesse: {interesse}\n\n"
+                f"Um consultor especializado da Seguro JA entrará em contato em breve. Muito obrigado!"
             )
             
             try:

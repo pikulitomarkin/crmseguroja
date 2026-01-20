@@ -125,27 +125,29 @@ class NotificationService:
         Notifica admin quando um lead é qualificado
         
         Args:
-            lead_data: Dados do lead (name, interest, necessity)
+            lead_data: Dados do lead (name, interest, necessity, email)
             whatsapp_number: Número WhatsApp do lead
         
         Returns:
             True se notificações foram enviadas com sucesso
         """
         try:
-            # Formata mensagem de notificação
-            whatsapp_msg = f"""🎯 *NOVO LEAD QUALIFICADO*
+            # Formata mensagem de notificação (sem formatação especial)
+            whatsapp_msg = f"""NOVO LEAD QUALIFICADO
 
-*Nome:* {lead_data.get('name', 'N/A')}
-*WhatsApp:* {whatsapp_number}
-*Interesse:* {lead_data.get('interest', 'N/A')}
-*Necessidade:* {lead_data.get('necessity', 'N/A')}
+Nome: {lead_data.get('name', 'N/A')}
+Email: {lead_data.get('email', 'N/A')}
+WhatsApp: {whatsapp_number}
+Interesse: {lead_data.get('interest', 'N/A')}
+Necessidade: {lead_data.get('necessity', 'N/A')}
 
-Clique no link para atender: [Dashboard]"""
+Entre em contato via WhatsApp ou email."""
             
             # Formata corpo do email
             email_body = f"""Novo Lead Qualificado
 
 Nome: {lead_data.get('name', 'N/A')}
+Email: {lead_data.get('email', 'N/A')}
 WhatsApp: {whatsapp_number}
 Interesse: {lead_data.get('interest', 'N/A')}
 Necessidade: {lead_data.get('necessity', 'N/A')}
