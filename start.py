@@ -30,6 +30,16 @@ if __name__ == "__main__":
     print("🎯 CRM WhatsApp - Iniciando sistema completo")
     print("=" * 60)
     
+    # Verifica volume persistente
+    try:
+        from check_volume import check_and_setup_volume
+        print("\n🔍 Verificando volume persistente...")
+        check_and_setup_volume()
+    except Exception as e:
+        print(f"⚠️  Aviso: Erro ao verificar volume: {e}")
+    
+    print()
+    
     # Inicia dashboard em thread separada
     dashboard_thread = threading.Thread(target=start_dashboard, daemon=True)
     dashboard_thread.start()

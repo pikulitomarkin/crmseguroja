@@ -11,7 +11,10 @@ class Settings:
     """Configurações centralizadas"""
     
     # Banco de Dados
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./crm_system.db")
+    # Se estiver no Railway, usa o volume persistente em /app/data
+    # Localmente, usa o diretório atual
+    db_path = os.getenv("DB_PATH", "/app/data/crm_system.db" if os.path.exists("/app/data") else "./crm_system.db")
+    DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{db_path}")
     
     # Evolution API
     EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "https://api.evolution.br/api")
