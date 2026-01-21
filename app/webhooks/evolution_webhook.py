@@ -128,17 +128,29 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks, e
         if "message" in data and isinstance(data["message"], dict) and "key" in data["message"]:
             # Formato 1: data.message.key e data.message.message
             message_obj = data.get("message", {})
-            whatsapp_number = message_obj.get("key", {}).get("remoteJid", "").split("@")[0]
+            key = message_obj.get("key", {})
+            whatsapp_number = key.get("remoteJid", "").split("@")[0]
+            from_me = key.get("fromMe", False)  # Verifica se é mensagem enviada pelo bot
             message_text = (
                 message_obj.get("message", {}).get("conversation", "") or
                 message_obj.get("message", {}).get("extendedTextMessage", {}).get("text", "")
             )
         else:
             # Formato 2: data.key e data.message diretamente
-            whatsapp_number = data.get("key", {}).get("remoteJid", "").split("@")[0]
+            key = data.get("key", {})
+            whatsapp_number = key.get("remoteJid", "").split("@")[0]
+            from_me = key.get("fromMe", False)  # Verifica se é mensagem enviada pelo bot
             message_text = (
                 data.get("message", {}).get("conversation", "") or
                 data.get("message", {}).get("extendedTextMessage", {}).get("text", "")
+            )
+        
+        # Ignora mensagens enviadas pelo próprio bot
+        if from_me:
+            logger.info(f"[{whatsapp_number}] Mensagem do bot ignorada")
+            return JSONResponse(
+                {"status": "ok", "message": "Bot message ignored"},
+                status_code=200
             )
         
         if not whatsapp_number or not message_text:
@@ -190,12 +202,14 @@ async def process_message(whatsapp_number: str, message_text: str):
             {"content": message_text}
         ])
         lead = LeadService.create_or_get_lead(db, whatsapp_number, customer_type)
+        logger.info(f"[{whatsapp_number}] Lead ID: {lead.id}, IA Ativa: {lead.status_ia}")
         
         # 2. SEMPRE salva mensagem do usuário (mesmo se IA desativada)
         MessageService.save_message(
             db, whatsapp_number, "user", message_text, role="user"
         )
-        logger.info(f"[{whatsapp_number}] Mensagem do usuário salva")
+        db.commit()  # Commit imediato para garantir que seja salva
+        logger.info(f"[{whatsapp_number}] Mensagem do usuário salva no banco")
         
         # 3. Verifica se IA deve responder
         if not LeadService.is_ia_active(db, whatsapp_number):
