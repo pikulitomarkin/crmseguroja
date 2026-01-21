@@ -7,27 +7,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Detecta se está no Railway
+is_railway = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("PORT")
+
+if is_railway:
+    # No Railway, sempre usa o volume
+    data_dir = Path("/app/data")
+    data_dir.mkdir(parents=True, exist_ok=True)
+    DB_PATH_DEFAULT = str(data_dir / "crm_system.db")
+else:
+    # Localmente, usa o diretório atual
+    DB_PATH_DEFAULT = "./crm_system.db"
+
 
 class Settings:
     """Configurações centralizadas"""
     
     # Banco de Dados
-    # No Railway, sempre usa o volume em /app/data
-    # Localmente, usa o diretório atual
-    def _get_db_path():
-        # Detecta se está no Railway (presença da variável PORT injetada pelo Railway)
-        is_railway = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("PORT")
-        
-        if is_railway:
-            # No Railway, sempre usa o volume
-            data_dir = Path("/app/data")
-            data_dir.mkdir(parents=True, exist_ok=True)
-            return str(data_dir / "crm_system.db")
-        else:
-            # Localmente, usa o diretório atual
-            return "./crm_system.db"
-    
-    db_path = os.getenv("DB_PATH", _get_db_path())
+    db_path = os.getenv("DB_PATH", DB_PATH_DEFAULT)
     DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{db_path}")
     
     # Evolution API
