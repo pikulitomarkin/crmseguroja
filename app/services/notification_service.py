@@ -52,7 +52,7 @@ class NotificationService:
                 msg.attach(MIMEText(html_body, "html"))
             
             # Conecta ao servidor SMTP
-            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=5) as server:
                 server.starttls()
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
                 server.send_message(msg)
@@ -67,7 +67,20 @@ class NotificationService:
             
             return True
         
+        except (OSError, ConnectionError) as e:
+            # Erro de rede (esperado no Railway - SMTP bloqueado)
+            # Não loga como erro, apenas aviso silencioso
+            if self.db:
+                self._log_notification(
+                    recipient=recipient_email,
+                    notification_type="email",
+                    status="bloqueado",
+                    error_message="SMTP bloqueado pela plataforma"
+                )
+            return False
+        
         except Exception as e:
+            # Outros erros (credenciais, etc)
             print(f"Erro ao enviar email: {str(e)}")
             if self.db:
                 self._log_notification(
