@@ -206,7 +206,7 @@ async def process_message(whatsapp_number: str, message_text: str):
         
         # 2. SEMPRE salva mensagem do usuário (mesmo se IA desativada)
         MessageService.save_message(
-            db, whatsapp_number, "user", message_text, role="user"
+            db, whatsapp_number, "user", message_text, role="user", lead_id=lead.id
         )
         db.commit()  # Commit imediato para garantir que seja salva
         logger.info(f"[{whatsapp_number}] Mensagem do usuário salva no banco")
@@ -320,7 +320,7 @@ async def process_message(whatsapp_number: str, message_text: str):
         # 7. Salva resposta da IA
         try:
             MessageService.save_message(
-                db, whatsapp_number, "ai", ai_response, role="assistant"
+                db, whatsapp_number, "ai", ai_response, role="assistant", lead_id=lead.id
             )
         except Exception as e:
             logger.error(f"Erro ao salvar mensagem IA: {str(e)}")

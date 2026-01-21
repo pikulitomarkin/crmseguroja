@@ -141,7 +141,8 @@ class MessageService:
         whatsapp_number: str,
         sender: str,
         message: str,
-        role: str = "user"
+        role: str = "user",
+        lead_id: int = None
     ) -> ChatMessage:
         """
         Salva mensagem no histórico
@@ -152,11 +153,19 @@ class MessageService:
             sender: "user" ou "ai"
             message: Conteúdo da mensagem
             role: Role para Claude (user/assistant)
+            lead_id: ID do lead (opcional, será buscado se não fornecido)
         
         Returns:
             Objeto ChatMessage criado
         """
+        # Se não forneceu lead_id, busca o lead pelo número
+        if lead_id is None:
+            lead = db.query(Lead).filter(Lead.whatsapp_number == whatsapp_number).first()
+            if lead:
+                lead_id = lead.id
+        
         chat = ChatMessage(
+            lead_id=lead_id,
             whatsapp_number=whatsapp_number,
             sender=sender,
             message=message,
