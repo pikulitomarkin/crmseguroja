@@ -177,13 +177,18 @@ Acesse o dashboard para assumir o atendimento."""
                 html_body=email_html
             )
             
-            # Envia WhatsApp
+            # Envia WhatsApp - valida número do admin
             whatsapp_sent = False
             if settings.ADMIN_WHATSAPP:
-                whatsapp_sent = await self.send_whatsapp_notification(
-                    settings.ADMIN_WHATSAPP,
-                    whatsapp_msg
-                )
+                admin_number = settings.ADMIN_WHATSAPP.strip()
+                # Valida que o número tem pelo menos 10 dígitos (código país + DDD + número)
+                if len(admin_number) >= 10:
+                    whatsapp_sent = await self.send_whatsapp_notification(
+                        admin_number,
+                        whatsapp_msg
+                    )
+                else:
+                    print(f"ADMIN_WHATSAPP inválido: '{admin_number}' (deve ter pelo menos 10 dígitos)")
             
             return email_sent or whatsapp_sent
         
