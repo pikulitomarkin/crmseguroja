@@ -443,6 +443,61 @@ async def get_lead_messages(lead_id: int):
             db.close()
 
 
+@app.post("/api/leads/{lead_id}/send-message")
+async def send_message_to_lead(lead_id: int, request: Request):
+    """Envia mensagem do humano para o lead via WhatsApp"""
+    db = None
+    try:
+        db = get_session(engine)
+        data = await request.json()
+        message_text = data.get("message", "").strip()
+        
+        if not message_text:
+            raise HTTPException(status_code=400, detail="Mensagem vazia")
+        
+        # Busca o lead
+        lead = db.query(Lead).filter(Lead.id == lead_id).first()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead não encontrado")
+        
+        # Desativa IA (humano assumiu o atendimento)
+        lead.status_ia = 0
+        db.commit()
+        
+        logger.info(f"[{lead.whatsapp_number}] Humano enviando mensagem: {message_text[:50]}...")
+        
+        # Envia mensagem via Evolution API
+        evolution = EvolutionService()
+        success = await evolution.send_message(lead.whatsapp_number, message_text)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Falha ao enviar mensagem")
+        
+        # Salva mensagem no histórico
+        chat_message = ChatMessage(
+            lead_id=lead.id,
+            whatsapp_number=lead.whatsapp_number,
+            sender="human",
+            message=message_text,
+            role="assistant"
+        )
+        db.add(chat_message)
+        db.commit()
+        
+        logger.info(f"[{lead.whatsapp_number}] Mensagem enviada pelo humano com sucesso")
+        
+        return {"success": True, "message": "Mensagem enviada com sucesso"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao enviar mensagem: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if db:
+            db.close()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
