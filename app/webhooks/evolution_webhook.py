@@ -184,24 +184,27 @@ async def process_message(whatsapp_number: str, message_text: str):
     try:
         logger.info(f"[{whatsapp_number}] Iniciando processamento: '{message_text[:50]}'")
         
-        # 1. Verifica se IA ainda deve responder
-        if not LeadService.is_ia_active(db, whatsapp_number):
-            logger.info(f"[{whatsapp_number}] IA desativada - mensagem ignorada")
-            return
-        
-        # 2. Cria ou recupera lead
+        # 1. Cria ou recupera lead
         qualification_engine = get_qualification_engine()
         customer_type = qualification_engine.classify_customer([
             {"content": message_text}
         ])
         lead = LeadService.create_or_get_lead(db, whatsapp_number, customer_type)
         
-        # 3. Salva mensagem do usuário
+        # 2. SEMPRE salva mensagem do usuário (mesmo se IA desativada)
         MessageService.save_message(
             db, whatsapp_number, "user", message_text, role="user"
         )
+        logger.info(f"[{whatsapp_number}] Mensagem do usuário salva")
         
-        # 4. Extrai dados de qualificação
+        # 3. Verifica se IA deve responder
+        if not LeadService.is_ia_active(db, whatsapp_number):
+            logger.info(f"[{whatsapp_number}] IA desativada - humano está atendendo")
+            elapsed = time.time() - start_time
+            logger.info(f"[{whatsapp_number}] ✅ Mensagem registrada em {elapsed:.2f}s")
+            return
+        
+        # 4. Extrai dados de qualificação (apenas se IA ativa)
         conversation = MessageService.get_conversation_history(db, whatsapp_number)
         ai_service = get_ai_service()
         extracted_data = ai_service.extract_qualification_data(conversation)
