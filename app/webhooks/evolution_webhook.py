@@ -477,8 +477,11 @@ async def send_message_to_lead(lead_id: int, request: Request):
         if not lead:
             raise HTTPException(status_code=404, detail="Lead não encontrado")
         
-        # Desativa IA (humano assumiu o atendimento)
+        # Desativa IA e atualiza status para em_negociacao
         lead.status_ia = 0
+        if lead.status == "qualificado":
+            lead.status = "em_negociacao"
+            logger.info(f"[{lead.whatsapp_number}] Status alterado: qualificado → em_negociacao")
         db.commit()
         
         logger.info(f"[{lead.whatsapp_number}] Humano enviando mensagem: {message_text[:50]}...")
@@ -509,6 +512,48 @@ async def send_message_to_lead(lead_id: int, request: Request):
         raise
     except Exception as e:
         logger.error(f"Erro ao enviar mensagem: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if db:
+            db.close()
+
+
+@app.post("/api/leads/{lead_id}/close")
+async def close_conversation(lead_id: int, request: Request):
+    """Encerra conversa com o lead"""
+    db = None
+    try:
+        db = get_session(engine)
+        data = await request.json()
+        success = data.get("success", False)  # True = convertido, False = perdido
+        
+        # Busca o lead
+        lead = db.query(Lead).filter(Lead.id == lead_id).first()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead não encontrado")
+        
+        # Atualiza status baseado no resultado
+        old_status = lead.status
+        if success:
+            lead.status = "convertido"
+            logger.info(f"[{lead.whatsapp_number}] Status: {old_status} → convertido ✅")
+        else:
+            lead.status = "perdido"
+            logger.info(f"[{lead.whatsapp_number}] Status: {old_status} → perdido ❌")
+        
+        # Mantém IA desativada
+        lead.status_ia = 0
+        db.commit()
+        
+        return {
+            "success": True, 
+            "message": f"Conversa encerrada - Status: {lead.status}"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao encerrar conversa: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if db:
