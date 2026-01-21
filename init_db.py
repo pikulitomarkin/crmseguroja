@@ -54,13 +54,33 @@ def main():
     
     # Inicializa banco de dados
     try:
-        engine = init_db(settings.DATABASE_URL)
-        print("✓ Banco de dados inicializado com sucesso!")
+        # Verifica se o banco já existe
+        db_file = Path(settings.db_path)
+        db_exists = db_file.exists()
         
-        # Testa conexão
+        if db_exists:
+            db_size = db_file.stat().st_size
+            print(f"✓ Banco de dados EXISTENTE encontrado: {db_file}")
+            print(f"✓ Tamanho do arquivo: {db_size:,} bytes")
+        else:
+            print(f"✓ Criando NOVO banco de dados: {db_file}")
+        
+        engine = init_db(settings.DATABASE_URL)
+        
+        if db_exists:
+            print("✓ Banco de dados conectado (dados preservados)")
+        else:
+            print("✓ Banco de dados criado com sucesso!")
+        
+        # Testa conexão e conta registros
         from sqlalchemy import text
-        from app.database.models import get_session
+        from app.database.models import get_session, Lead
         db = get_session(engine)
+        
+        # Conta leads existentes
+        lead_count = db.query(Lead).count()
+        print(f"✓ Leads no banco: {lead_count}")
+        
         db.execute(text("SELECT 1"))
         db.close()
         print("✓ Teste de conexão: OK")
