@@ -26,7 +26,7 @@ class AIService:
         self,
         user_message: str,
         conversation_history: List[Dict],
-        customer_type: str = "novo"
+        flow_step: str = "menu_principal"
     ) -> str:
         """
         Obtém resposta da OpenAI para uma mensagem do usuário
@@ -34,7 +34,7 @@ class AIService:
         Args:
             user_message: Mensagem do usuário
             conversation_history: Histórico de conversas anteriores
-            customer_type: "novo" ou "existente"
+            flow_step: Etapa atual do fluxo (menu_principal, seguro_auto, etc)
         
         Returns:
             Resposta da IA
@@ -42,7 +42,7 @@ class AIService:
         try:
             # Formata o histórico para OpenAI
             messages = [
-                {"role": "system", "content": get_system_prompt(customer_type)}
+                {"role": "system", "content": get_system_prompt(flow_step)}
             ]
             
             for msg in conversation_history[-10:]:  # Últimas 10 mensagens
@@ -132,3 +132,117 @@ class AIService:
         except Exception as e:
             print(f"Erro ao extrair dados de qualificação: {str(e)}")
             return {"name": None, "interest": None, "necessity": None}
+    
+    def extract_lead_data_from_conversation(
+        self,
+        conversation_history: List[Dict],
+        flow_type: str
+    ) -> Dict:
+        """
+        Extrai dados específicos do lead baseado no tipo de fluxo
+        
+        Args:
+            conversation_history: Histórico de conversas
+            flow_type: Tipo de fluxo (seguro_auto, consorcio, etc)
+        
+        Returns:
+            Dicionário com dados extraídos
+        """
+        try:
+            # Formata histórico
+            messages = [
+                {
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                }
+                for msg in conversation_history[-20:]  # Últimas 20 mensagens
+            ]
+            
+            # Define os campos a extrair baseado no fluxo
+            fields_map = {
+                "seguro_auto": {
+                    "name": "nome completo ou null",
+                    "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
+                    "vehicle_plate": "placa do veículo ou null",
+                    "phone": "telefone (apenas números) ou null",
+                    "whatsapp_contact": "WhatsApp (apenas números) ou null",
+                    "email": "e-mail ou null",
+                    "second_email": "segundo e-mail ou null",
+                    "cep_pernoite": "CEP de pernoite (apenas números) ou null",
+                    "profession": "profissão ou null",
+                    "marital_status": "estado civil ou null",
+                    "vehicle_usage": "uso do veículo (particular/trabalho) ou null",
+                    "has_young_driver": "condutor menor de 26 anos (true/false) ou null"
+                },
+                "seguro_residencial": {
+                    "name": "nome completo ou null",
+                    "phone": "telefone (apenas números) ou null",
+                    "whatsapp_contact": "WhatsApp (apenas números) ou null",
+                    "property_cep": "CEP do imóvel (apenas números) ou null",
+                    "property_type": "tipo de imóvel ou null",
+                    "property_value": "valor aproximado ou null",
+                    "property_ownership": "próprio ou alugado ou null"
+                },
+                "consorcio": {
+                    "name": "nome completo ou null",
+                    "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
+                    "phone": "telefone (apenas números) ou null",
+                    "whatsapp_contact": "WhatsApp (apenas números) ou null",
+                    "email": "e-mail principal ou null",
+                    "second_email": "segundo e-mail ou null",
+                    "consortium_type": "tipo de consórcio (auto/imovel/servico) ou null",
+                    "consortium_value": "valor da carta de crédito ou null",
+                    "consortium_term": "prazo em meses ou null",
+                    "has_previous_consortium": "já participou de consórcio (true/false) ou null"
+                },
+                "segunda_via": {
+                    "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
+                    "interest": "produto (seguro/consorcio) ou null"
+                },
+                "sinistro": {
+                    "name": "nome completo ou null",
+                    "phone": "telefone (apenas números) ou null",
+                    "whatsapp_contact": "WhatsApp (apenas números) ou null",
+                    "interest": "tipo de seguro ou null"
+                }
+            }
+            
+            fields = fields_map.get(flow_type, {})
+            if not fields:
+                return {}
+            
+            # Cria prompt de extração
+            fields_json = json.dumps(fields, ensure_ascii=False, indent=2)
+            extraction_prompt = f"""Analise esta conversa e extraia os seguintes dados em JSON válido:
+{fields_json}
+
+Retorne APENAS JSON válido, sem explicação adicional."""
+            
+            messages.append({
+                "role": "user",
+                "content": extraction_prompt
+            })
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                max_tokens=400,
+                temperature=0.3,
+                response_format={"type": "json_object"},
+                messages=messages
+            )
+            
+            # Parse JSON
+            response_text = response.choices[0].message.content
+            
+            # Remove markdown se existir
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0]
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0]
+            
+            data = json.loads(response_text.strip())
+            return data
+        
+        except Exception as e:
+            print(f"Erro ao extrair dados do lead: {str(e)}")
+            return {}

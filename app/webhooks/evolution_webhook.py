@@ -13,10 +13,12 @@ from app.database.models import init_db, get_session, Lead, ChatMessage
 from app.services.ai_service import AIService
 from app.services.evolution_service import EvolutionService
 from app.services.notification_service import NotificationService
+from app.services.email_scheduler import email_scheduler
 from app.services.database_service import (
     LeadService, MessageService, QualificationFieldService
 )
 from app.core.qualification import QualificationEngine
+from app.core.flow_manager import FlowManager
 
 # Configuração de logging
 logging.basicConfig(level=logging.INFO)
@@ -25,12 +27,34 @@ logger = logging.getLogger(__name__)
 # Inicializa FastAPI
 app = FastAPI(
     title="CRM WhatsApp Integration",
-    description="Integração Evolution API + OpenAI + Dashboard CRM",
+    description="Integração Evolution API + OpenAI + Dashboard CRM + Email Monitor",
     version="1.0.0"
 )
 
 # Inicializa banco de dados
 engine = init_db(settings.DATABASE_URL)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Evento executado ao iniciar a aplicação"""
+    logger.info("🚀 Iniciando sistema CRM...")
+    
+    # Inicia scheduler de e-mails (verifica a cada 24 horas)
+    email_scheduler.start(interval_hours=24)
+    
+    logger.info("✅ Sistema CRM iniciado com sucesso")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Evento executado ao encerrar a aplicação"""
+    logger.info("🛑 Encerrando sistema CRM...")
+    
+    # Para scheduler de e-mails
+    email_scheduler.stop()
+    
+    logger.info("✅ Sistema CRM encerrado")
 
 # Serviços serão inicializados quando necessário
 def get_ai_service():
@@ -69,10 +93,55 @@ async def health():
         logger.error(f"Health check DB error: {str(e)}")
         db_status = "error"
     
+    # Verifica status do scheduler de e-mails
+    email_scheduler_status = {
+        "running": email_scheduler.is_running,
+        "next_run": email_scheduler.get_next_run_time().isoformat() if email_scheduler.get_next_run_time() else None
+    }
+    
     return {
         "status": "healthy" if db_status == "connected" else "degraded",
         "database": db_status,
+        "email_scheduler": email_scheduler_status,
         "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/api/email/check-now")
+async def trigger_email_check():
+    """Dispara verificação imediata de e-mails"""
+    try:
+        if not email_scheduler.is_running:
+            return JSONResponse(
+                {"status": "error", "message": "Email scheduler não está rodando"},
+                status_code=400
+            )
+        
+        email_scheduler.trigger_now()
+        
+        return {
+            "status": "ok",
+            "message": "Verificação de e-mails agendada para execução imediata"
+        }
+    except Exception as e:
+        logger.error(f"Erro ao disparar verificação de e-mails: {str(e)}")
+        return JSONResponse(
+            {"status": "error", "message": str(e)},
+            status_code=500
+        )
+
+
+@app.get("/api/email/status")
+async def email_scheduler_status():
+    """Retorna status do scheduler de e-mails"""
+    next_run = email_scheduler.get_next_run_time()
+    
+    return {
+        "status": "running" if email_scheduler.is_running else "stopped",
+        "is_running": email_scheduler.is_running,
+        "next_check": next_run.isoformat() if next_run else None,
+        "email_account": settings.SMTP_USER or "Não configurado",
+        "admin_whatsapp": settings.ADMIN_WHATSAPP or "Não configurado"
     }
 
 
@@ -182,7 +251,7 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks, e
 
 async def process_message(whatsapp_number: str, message_text: str):
     """
-    Processa uma mensagem recebida
+    Processa uma mensagem recebida usando o novo sistema de fluxos
     
     Args:
         whatsapp_number: Número WhatsApp do remetente
@@ -197,19 +266,15 @@ async def process_message(whatsapp_number: str, message_text: str):
         logger.info(f"[{whatsapp_number}] Iniciando processamento: '{message_text[:50]}'")
         
         # 1. Cria ou recupera lead
-        qualification_engine = get_qualification_engine()
-        customer_type = qualification_engine.classify_customer([
-            {"content": message_text}
-        ])
-        lead = LeadService.create_or_get_lead(db, whatsapp_number, customer_type)
-        logger.info(f"[{whatsapp_number}] Lead ID: {lead.id}, IA Ativa: {lead.status_ia}")
+        lead = LeadService.create_or_get_lead(db, whatsapp_number, "novo")
+        logger.info(f"[{whatsapp_number}] Lead ID: {lead.id}, IA Ativa: {lead.status_ia}, Etapa: {lead.flow_step}")
         
-        # 2. SEMPRE salva mensagem do usuário (mesmo se IA desativada)
+        # 2. SEMPRE salva mensagem do usuário
         MessageService.save_message(
             db, whatsapp_number, "user", message_text, role="user", lead_id=lead.id
         )
-        db.commit()  # Commit imediato para garantir que seja salva
-        logger.info(f"[{whatsapp_number}] Mensagem do usuário salva no banco")
+        db.commit()
+        logger.info(f"[{whatsapp_number}] Mensagem do usuário salva")
         
         # 3. Verifica se IA deve responder
         if not LeadService.is_ia_active(db, whatsapp_number):
@@ -218,114 +283,134 @@ async def process_message(whatsapp_number: str, message_text: str):
             logger.info(f"[{whatsapp_number}] ✅ Mensagem registrada em {elapsed:.2f}s")
             return
         
-        # 4. Extrai dados de qualificação (apenas se IA ativa)
-        conversation = MessageService.get_conversation_history(db, whatsapp_number)
+        # 4. Inicializa serviços
         ai_service = get_ai_service()
-        extracted_data = ai_service.extract_qualification_data(conversation)
+        flow_manager = FlowManager()
+        qualification_engine = get_qualification_engine()
+        conversation = MessageService.get_conversation_history(db, whatsapp_number)
         
-        # Atualiza lead com dados extraídos
-        if extracted_data.get("name"):
-            LeadService.update_lead(db, lead, name=extracted_data["name"])
-            QualificationFieldService.update_fields(
-                db, whatsapp_number, has_name=True
-            )
+        # 5. Gerencia navegação do fluxo
+        current_step = lead.flow_step or "menu_principal"
+        flow_type = lead.flow_type
         
-        if extracted_data.get("email"):
-            LeadService.update_lead(db, lead, email=extracted_data["email"])
-            QualificationFieldService.update_fields(
-                db, whatsapp_number, has_email=True
-            )
+        # Se está no menu principal, detecta escolha
+        if current_step == "menu_principal":
+            choice = flow_manager.detect_menu_choice(message_text)
+            if choice:
+                if choice == "seguro":
+                    # Perguntar tipo de seguro
+                    current_step = "escolher_seguro"
+                elif choice == "consorcio":
+                    current_step = "consorcio"
+                    flow_type = "consorcio"
+                elif choice in ["segunda_via", "sinistro", "falar_humano", "outros_assuntos"]:
+                    current_step = choice
+                    flow_type = choice
+                
+                # Atualiza lead
+                LeadService.update_lead(db, lead, flow_step=current_step, flow_type=flow_type)
+                db.commit()
         
-        if extracted_data.get("interest"):
-            LeadService.update_lead(db, lead, interest=extracted_data["interest"])
-            QualificationFieldService.update_fields(
-                db, whatsapp_number, has_interest=True
-            )
+        # Se está escolhendo tipo de seguro
+        elif current_step == "escolher_seguro":
+            insurance_type = flow_manager.detect_insurance_type(message_text)
+            if insurance_type:
+                current_step = insurance_type
+                flow_type = insurance_type
+                LeadService.update_lead(db, lead, flow_step=current_step, flow_type=flow_type)
+                db.commit()
         
-        if extracted_data.get("necessity"):
-            LeadService.update_lead(db, lead, necessity=extracted_data["necessity"])
-            QualificationFieldService.update_fields(
-                db, whatsapp_number, has_necessity=True
-            )
+        # Se está em consórcio mas ainda não escolheu tipo
+        elif current_step == "consorcio" and not lead.consortium_type:
+            consortium_type = flow_manager.detect_consortium_type(message_text)
+            if consortium_type:
+                LeadService.update_lead(db, lead, consortium_type=consortium_type)
+                db.commit()
         
-        # 5. Verifica se deve transferir para humano
-        should_transfer, reason = qualification_engine.should_transition_to_human(
-            extracted_data,
-            conversation
-        )
+        # 6. Extrai dados da mensagem atual
+        lead_dict = {
+            "name": lead.name,
+            "email": lead.email,
+            "second_email": lead.second_email,
+            "cpf_cnpj": lead.cpf_cnpj,
+            "phone": lead.phone,
+            "whatsapp_contact": lead.whatsapp_contact,
+            "vehicle_plate": lead.vehicle_plate,
+            "cep_pernoite": lead.cep_pernoite,
+            "profession": lead.profession,
+            "marital_status": lead.marital_status,
+            "vehicle_usage": lead.vehicle_usage,
+            "has_young_driver": lead.has_young_driver,
+            "property_cep": lead.property_cep,
+            "property_type": lead.property_type,
+            "property_value": lead.property_value,
+            "property_ownership": lead.property_ownership,
+            "consortium_type": lead.consortium_type,
+            "consortium_value": lead.consortium_value,
+            "consortium_term": lead.consortium_term,
+            "has_previous_consortium": lead.has_previous_consortium,
+            "flow_type": flow_type,
+            "flow_step": current_step
+        }
+        
+        # Extrai dados específicos do fluxo atual
+        if flow_type:
+            extracted = ai_service.extract_lead_data_from_conversation(conversation, flow_type)
+            # Atualiza lead com dados extraídos
+            for key, value in extracted.items():
+                if value and value != "null" and not lead_dict.get(key):
+                    lead_dict[key] = value
+                    setattr(lead, key, value)
+            
+            db.commit()
+        
+        # 7. Verifica se deve transferir para humano
+        should_transfer = flow_manager.should_transfer_to_human(current_step, flow_type, lead_dict)
         
         if should_transfer:
-            logger.info(f"Transferindo lead {whatsapp_number}: {reason}")
+            logger.info(f"Transferindo lead {whatsapp_number}: {current_step}")
             
-            # 1. Atualiza status do lead no banco (CRÍTICO - deve acontecer primeiro)
-            try:
-                LeadService.mark_qualified(db, lead)
-                db.commit()
-                logger.info(f"Lead {whatsapp_number} marcado como qualificado no banco")
-            except Exception as e:
-                logger.error(f"Erro ao atualizar status do lead: {str(e)}")
+            # Marca como qualificado
+            LeadService.mark_qualified(db, lead)
+            db.commit()
             
-            # 2. Envia mensagem de finalização ao cliente (PRIORITÁRIO)
-            nome = extracted_data.get('name', 'cliente')
-            email = extracted_data.get('email', 'não informado')
-            interesse = extracted_data.get('interest', 'seguro')
-            
-            final_message = (
-                f"Perfeito, {nome}! Coletei todas as informações necessárias.\n\n"
-                f"Dados confirmados:\n"
-                f"Nome: {nome}\n"
-                f"Email: {email}\n"
-                f"Interesse: {interesse}\n\n"
-                f"Um consultor especializado da Seguro JA entrará em contato em breve. Muito obrigado!"
-            )
-            
-            try:
-                evolution_service = get_evolution_service()
-                await evolution_service.send_message(whatsapp_number, final_message)
-                logger.info(f"Mensagem final enviada para {whatsapp_number}")
-            except Exception as e:
-                logger.error(f"Erro ao enviar mensagem final: {str(e)}")
-            
-            # 3. Notifica admin em BACKGROUND (não-bloqueante)
+            # Mensagem de finalização já será enviada pela IA com o prompt correto
+            # Notifica admin em background
             async def notify_admin_background(service, data, number):
                 try:
                     await service.notify_admin_lead_qualified(data, number)
                     logger.info(f"Admin notificado sobre lead {number}")
                 except Exception as e:
-                    logger.error(f"Erro ao notificar admin (background): {str(e)}")
-                    import traceback
-                    logger.error(traceback.format_exc())
+                    logger.error(f"Erro ao notificar admin: {str(e)}")
             
-            # Agenda notificação para rodar em background
             try:
                 asyncio.create_task(
-                    notify_admin_background(notification_service, extracted_data, whatsapp_number)
+                    notify_admin_background(notification_service, lead_dict, whatsapp_number)
                 )
             except Exception as e:
                 logger.error(f"Erro ao criar task de notificação: {str(e)}")
-            
-            return
         
-        # 6. Gera resposta da IA
+        # 8. Gera resposta da IA com o prompt correto
         try:
             ai_response = ai_service.get_response(
                 user_message=message_text,
                 conversation_history=conversation,
-                customer_type=customer_type
+                flow_step=current_step
             )
         except Exception as e:
             logger.error(f"Erro ao gerar resposta IA: {str(e)}")
             ai_response = "Desculpe, tive um problema técnico. Pode repetir sua mensagem?"
         
-        # 7. Salva resposta da IA
+        # 9. Salva resposta da IA
         try:
             MessageService.save_message(
                 db, whatsapp_number, "ai", ai_response, role="assistant", lead_id=lead.id
             )
+            db.commit()
         except Exception as e:
             logger.error(f"Erro ao salvar mensagem IA: {str(e)}")
         
-        # 8. Envia resposta via WhatsApp
+        # 10. Envia resposta via WhatsApp
         try:
             evolution_service = get_evolution_service()
             await evolution_service.send_message(whatsapp_number, ai_response)

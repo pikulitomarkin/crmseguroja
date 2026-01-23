@@ -18,6 +18,38 @@ class Lead(Base):
     whatsapp_number = Column(String(20), unique=True, index=True)
     name = Column(String(150), nullable=True)
     email = Column(String(150), nullable=True)
+    second_email = Column(String(150), nullable=True)
+    
+    # Campos de fluxo
+    flow_type = Column(String(50), nullable=True)  # seguro_auto, seguro_residencial, consorcio, etc
+    flow_step = Column(String(50), default="menu_principal")  # etapa atual do fluxo
+    
+    # Dados gerais
+    cpf_cnpj = Column(String(20), nullable=True)
+    phone = Column(String(20), nullable=True)
+    whatsapp_contact = Column(String(20), nullable=True)
+    
+    # Dados Seguro Auto
+    vehicle_plate = Column(String(10), nullable=True)
+    cep_pernoite = Column(String(10), nullable=True)
+    profession = Column(String(150), nullable=True)
+    marital_status = Column(String(50), nullable=True)
+    vehicle_usage = Column(String(50), nullable=True)  # particular, trabalho
+    has_young_driver = Column(Boolean, nullable=True)  # condutor < 26 anos
+    
+    # Dados Seguro Residencial
+    property_cep = Column(String(10), nullable=True)
+    property_type = Column(String(100), nullable=True)
+    property_value = Column(String(100), nullable=True)
+    property_ownership = Column(String(50), nullable=True)  # proprio, alugado
+    
+    # Dados Consórcio
+    consortium_type = Column(String(50), nullable=True)  # auto, imovel, servico
+    consortium_value = Column(String(100), nullable=True)
+    consortium_term = Column(String(50), nullable=True)  # prazo em meses
+    has_previous_consortium = Column(Boolean, nullable=True)
+    
+    # Campos legados (manter compatibilidade)
     interest = Column(Text, nullable=True)
     necessity = Column(Text, nullable=True)
     qualification_score = Column(Float, default=0)

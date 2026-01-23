@@ -36,12 +36,16 @@ class Settings:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")  # ou gpt-4o-mini, gpt-4-turbo, etc.
     
-    # Email Configuration
+    # Email Configuration (Agora usado para LEITURA de e-mails)
     SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-    SMTP_USER = os.getenv("SMTP_USER", "")
-    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+    SMTP_USER = os.getenv("SMTP_USER", "")  # E-mail que será monitorado
+    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")  # Senha de app (Gmail) ou senha normal
     EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@crmsystem.com")
+    
+    # Email Reader Configuration
+    EMAIL_CHECK_INTERVAL = int(os.getenv("EMAIL_CHECK_INTERVAL", "5"))  # minutos
+    EMAIL_MAX_PROCESS = int(os.getenv("EMAIL_MAX_PROCESS", "10"))  # máx e-mails por vez
     
     # Notificações
     ADMIN_WHATSAPP = os.getenv("ADMIN_WHATSAPP", "")  # Número do admin para receber notificações
