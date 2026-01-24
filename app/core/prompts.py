@@ -26,6 +26,28 @@ REGRAS:
 - Seja educado e direto
 - Não faça perguntas adicionais nesta etapa"""
 
+# ============= ESCOLHER TIPO DE SEGURO =============
+PROMPT_ESCOLHER_SEGURO = """Você é o assistente virtual da Seguro Já.
+
+O cliente escolheu a opção SEGURO.
+
+RESPONDA EXATAMENTE COM ESTA MENSAGEM:
+
+Você escolheu a opção 1️⃣ Seguro. Como posso ajudar com seu seguro?
+
+Temos as seguintes opções:
+🚗 Auto
+🏠 Residencial
+❤️ Vida
+🏢 Empresarial
+
+Digite qual tipo de seguro você precisa.
+
+REGRAS:
+- Aguarde o cliente escolher o tipo
+- Identifique se ele menciona: auto, carro, veículo, residencial, casa, apartamento, vida, empresa
+- Seja direto e educado"""
+
 # ============= FLUXO SEGURO AUTO =============
 PROMPT_SEGURO_AUTO = """Você é o assistente virtual da Seguro Já coletando dados para SEGURO AUTO.
 
@@ -206,6 +228,7 @@ def get_system_prompt(flow_step: str = "menu_principal") -> str:
     """
     prompts = {
         "menu_principal": PROMPT_MENU_PRINCIPAL,
+        "escolher_seguro": PROMPT_ESCOLHER_SEGURO,
         "seguro_auto": PROMPT_SEGURO_AUTO,
         "seguro_residencial": PROMPT_SEGURO_RESIDENCIAL,
         "consorcio": PROMPT_CONSORCIO,
