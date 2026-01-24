@@ -123,6 +123,15 @@ class FlowManager:
         """
         message = message.lower().strip()
         
+        # Detecta por número
+        if message == "1":
+            return "auto"
+        if message == "2":
+            return "imovel"
+        if message == "3":
+            return "servico"
+        
+        # Detecta por palavra-chave
         if "auto" in message or "carro" in message or "veículo" in message or "veiculo" in message:
             return "auto"
         if "imóvel" in message or "imovel" in message or "casa" in message or "apartamento" in message:
