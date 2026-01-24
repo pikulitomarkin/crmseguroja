@@ -21,20 +21,27 @@ class FlowManager:
     # Campos obrigatórios por fluxo (second_email é sempre opcional)
     REQUIRED_FIELDS = {
         "seguro_auto": [
-            "cpf_cnpj", "vehicle_plate", "phone", "whatsapp_contact",
+            "cpf_cnpj", "vehicle_plate", "whatsapp_contact",
             "cep_pernoite", "profession", "marital_status", 
-            "vehicle_usage"
+            "vehicle_usage", "has_young_driver"
         ],
         "seguro_residencial": [
-            "name", "phone", "property_cep", "property_type",
+            "name", "whatsapp_contact", "property_cep", "property_type",
             "property_value", "property_ownership"
         ],
+        "seguro_vida": [
+            "name", "whatsapp_contact", "cpf_cnpj", "email"
+        ],
+        "seguro_empresarial": [
+            "name", "whatsapp_contact", "cpf_cnpj", "email"
+        ],
         "consorcio": [
-            "cpf_cnpj", "phone", "whatsapp_contact", "email",
-            "consortium_type", "consortium_value", "consortium_term"
+            "cpf_cnpj", "whatsapp_contact", "email",
+            "consortium_type", "consortium_value", "consortium_term",
+            "has_previous_consortium"
         ],
         "segunda_via": ["cpf_cnpj"],
-        "sinistro": ["name", "phone"],
+        "sinistro": ["name", "whatsapp_contact"],
         "outros_assuntos": ["name"]
     }
     

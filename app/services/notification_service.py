@@ -138,57 +138,105 @@ class NotificationService:
         Notifica admin quando um lead é qualificado
         
         Args:
-            lead_data: Dados do lead (name, interest, necessity, email)
+            lead_data: Dados do lead completos
             whatsapp_number: Número WhatsApp do lead
         
         Returns:
             True se notificações foram enviadas com sucesso
         """
         try:
-            # Formata mensagem de notificação (sem formatação especial)
-            whatsapp_msg = f"""NOVO LEAD QUALIFICADO
-
-Nome: {lead_data.get('name', 'N/A')}
-Email: {lead_data.get('email', 'N/A')}
-WhatsApp: {whatsapp_number}
-Interesse: {lead_data.get('interest', 'N/A')}
-Necessidade: {lead_data.get('necessity', 'N/A')}
-
-Entre em contato via WhatsApp ou email."""
+            flow_type = lead_data.get('flow_type', 'desconhecido')
             
-            # Formata corpo do email
-            email_body = f"""Novo Lead Qualificado
+            # Monta mensagem baseada no tipo de fluxo
+            if flow_type == 'seguro_auto':
+                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - SEGURO AUTO*
 
-Nome: {lead_data.get('name', 'N/A')}
-Email: {lead_data.get('email', 'N/A')}
-WhatsApp: {whatsapp_number}
-Interesse: {lead_data.get('interest', 'N/A')}
-Necessidade: {lead_data.get('necessity', 'N/A')}
+📋 *DADOS DO CLIENTE:*
+👤 Nome: {lead_data.get('name', 'N/A')}
+📱 WhatsApp: {whatsapp_number}
+📧 Email: {lead_data.get('email', 'N/A')}
+{f"📧 Email 2: {lead_data.get('second_email')}" if lead_data.get('second_email') else ""}
 
-Acesse o dashboard para assumir o atendimento."""
-            
-            email_html = f"""
-            <html>
-                <body style="font-family: Arial, sans-serif;">
-                    <h2 style="color: #25D366;">🎯 Novo Lead Qualificado</h2>
-                    <p><strong>Nome:</strong> {lead_data.get('name', 'N/A')}</p>
-                    <p><strong>WhatsApp:</strong> {whatsapp_number}</p>
-                    <p><strong>Interesse:</strong> {lead_data.get('interest', 'N/A')}</p>
-                    <p><strong>Necessidade:</strong> {lead_data.get('necessity', 'N/A')}</p>
-                    <p><a href="http://localhost:8501" style="background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                        Acessar Dashboard
-                    </a></p>
-                </body>
-            </html>
-            """
-            
-            # Envia email
-            email_sent = self.send_email(
-                recipient_email=settings.ADMIN_EMAIL,
-                subject=f"🎯 Novo Lead Qualificado - {lead_data.get('name', 'Sem nome')}",
-                body=email_body,
-                html_body=email_html
-            )
+🚗 *DADOS DO VEÍCULO:*
+🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
+🚙 Placa: {lead_data.get('vehicle_plate', 'N/A')}
+📍 CEP Pernoite: {lead_data.get('cep_pernoite', 'N/A')}
+🏢 Profissão: {lead_data.get('profession', 'N/A')}
+💍 Estado Civil: {lead_data.get('marital_status', 'N/A')}
+🎯 Uso: {lead_data.get('vehicle_usage', 'N/A')}
+👨‍👦 Condutor < 26 anos: {lead_data.get('has_young_driver', 'N/A')}
+
+---
+💡 *Entre em contato imediatamente!*"""
+
+            elif flow_type == 'seguro_residencial':
+                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - SEGURO RESIDENCIAL*
+
+📋 *DADOS DO CLIENTE:*
+👤 Nome: {lead_data.get('name', 'N/A')}
+📱 WhatsApp: {whatsapp_number}
+📧 Email: {lead_data.get('email', 'N/A')}
+
+🏠 *DADOS DO IMÓVEL:*
+📍 CEP: {lead_data.get('property_cep', 'N/A')}
+🏢 Tipo: {lead_data.get('property_type', 'N/A')}
+💰 Valor: {lead_data.get('property_value', 'N/A')}
+🔑 Situação: {lead_data.get('property_ownership', 'N/A')}
+
+---
+💡 *Entre em contato imediatamente!*"""
+
+            elif flow_type == 'consorcio':
+                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - CONSÓRCIO*
+
+📋 *DADOS DO CLIENTE:*
+👤 Nome: {lead_data.get('name', 'N/A')}
+🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
+📱 WhatsApp: {whatsapp_number}
+📧 Email: {lead_data.get('email', 'N/A')}
+{f"📧 Email 2: {lead_data.get('second_email')}" if lead_data.get('second_email') else ""}
+
+💼 *DADOS DO CONSÓRCIO:*
+📝 Tipo: {lead_data.get('consortium_type', 'N/A')}
+💰 Valor da Carta: {lead_data.get('consortium_value', 'N/A')}
+📅 Prazo: {lead_data.get('consortium_term', 'N/A')} meses
+🔄 Já participou antes: {lead_data.get('has_previous_consortium', 'N/A')}
+
+---
+💡 *Entre em contato imediatamente!*"""
+
+            elif flow_type == 'segunda_via':
+                whatsapp_msg = f"""🔔 *SOLICITAÇÃO - SEGUNDA VIA*
+
+📋 *DADOS:*
+👤 Nome: {lead_data.get('name', 'N/A')}
+🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
+📱 WhatsApp: {whatsapp_number}
+
+---
+💡 *Enviar segunda via do boleto*"""
+
+            elif flow_type == 'sinistro':
+                whatsapp_msg = f"""🔔 *URGENTE - SINISTRO*
+
+📋 *DADOS:*
+👤 Nome: {lead_data.get('name', 'N/A')}
+📱 WhatsApp: {whatsapp_number}
+
+---
+⚠️ *PRIORIDADE: Entrar em contato IMEDIATAMENTE!*"""
+
+            else:
+                # Outros assuntos ou fluxo genérico
+                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO*
+
+👤 Nome: {lead_data.get('name', 'N/A')}
+📱 WhatsApp: {whatsapp_number}
+📧 Email: {lead_data.get('email', 'N/A')}
+📋 Tipo: {flow_type}
+
+---
+💡 *Entre em contato!*"""
             
             # Envia WhatsApp - valida número do admin
             whatsapp_sent = False
@@ -202,6 +250,16 @@ Acesse o dashboard para assumir o atendimento."""
                     )
                 else:
                     print(f"ADMIN_WHATSAPP inválido: '{admin_number}' (deve ter pelo menos 10 dígitos)")
+            
+            # Email simplificado (opcional)
+            email_sent = False
+            if settings.ADMIN_EMAIL:
+                email_body = whatsapp_msg.replace('*', '').replace('_', '')
+                email_sent = self.send_email(
+                    recipient_email=settings.ADMIN_EMAIL,
+                    subject=f"🎯 Novo Lead - {flow_type.replace('_', ' ').title()}",
+                    body=email_body
+                )
             
             return email_sent or whatsapp_sent
         
