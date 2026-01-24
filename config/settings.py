@@ -54,7 +54,7 @@ class Settings:
     # FastAPI
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
     API_PORT = int(os.getenv("PORT", os.getenv("API_PORT", "8000")))  # Railway usa PORT
-    API_WEBHOOK_PATH = "/webhook/evolution"
+    API_WEBHOOK_PATH = os.getenv("API_WEBHOOK_PATH", "/webhook/evolution")
     
     # Streamlit
     STREAMLIT_PORT = int(os.getenv("STREAMLIT_PORT", "8501"))

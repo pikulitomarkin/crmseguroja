@@ -156,30 +156,68 @@ class EmailReaderService:
     
     def is_insurance_related(self, subject: str, body: str) -> bool:
         """
-        Verifica se o e-mail é relacionado a seguros ou consórcios
+        Usa IA para verificar se o e-mail é relacionado a seguros ou consórcios
         
         Args:
             subject: Assunto do e-mail
             body: Corpo do e-mail
         
         Returns:
-            True se for relacionado a seguros
+            True se for relacionado a seguros/consórcios
         """
-        keywords = [
-            "seguro", "cotação", "cotacao", "orçamento", "orcamento",
-            "apólice", "apolice", "sinistro", "indenização", "indenizacao",
-            "cobertura", "prêmio", "premio", "franquia",
-            "consórcio", "consorcio", "carta de crédito", "carta de credito",
-            "auto", "veículo", "veiculo", "carro", "moto",
-            "residencial", "imóvel", "imovel", "casa", "apartamento",
-            "vida", "acidentes pessoais",
-            "proposta", "renovação", "renovacao",
-            "seguro já", "seguro ja"
-        ]
-        
-        text = (subject + " " + body).lower()
-        
-        return any(keyword in text for keyword in keywords)
+        try:
+            # Usa IA para classificar o e-mail
+            prompt = f"""Analise este e-mail e determine se é uma solicitação REAL relacionada a:
+- Cotação de seguro (auto, residencial, vida, empresarial)
+- Dúvidas sobre seguros
+- Contratação de seguro
+- Sinistros
+- Consórcio (imobiliário ou automotivo)
+- Dúvidas sobre consórcio
+
+ASSUNTO: {subject}
+
+CORPO:
+{body[:1000]}
+
+Responda APENAS com "SIM" se for relacionado aos assuntos acima, ou "NÃO" se for:
+- Spam
+- Marketing genérico
+- Newsletter
+- Confirmação de cadastro
+- E-mail automático
+- Notificação de sistema
+- Assunto não relacionado
+
+Resposta (SIM ou NÃO):"""
+
+            response = self.ai_service.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": "Você é um classificador de e-mails. Responda apenas SIM ou NÃO."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=10
+            )
+            
+            answer = response.choices[0].message.content.strip().upper()
+            is_relevant = "SIM" in answer or "YES" in answer
+            
+            logger.info(f"📊 Classificação IA: {'✅ RELEVANTE' if is_relevant else '❌ NÃO RELEVANTE'}")
+            return is_relevant
+            
+        except Exception as e:
+            logger.error(f"Erro ao classificar e-mail com IA: {str(e)}")
+            # Fallback: usa keywords simples
+            keywords = [
+                "cotação de seguro", "cotacao de seguro", "contratar seguro",
+                "orçamento seguro", "orcamento seguro", "seguro auto",
+                "seguro residencial", "seguro de vida", "consórcio",
+                "consorcio", "carta de crédito", "sinistro"
+            ]
+            text = (subject + " " + body).lower()
+            return any(keyword in text for keyword in keywords)
     
     async def process_insurance_email(
         self,
@@ -364,11 +402,13 @@ class EmailReaderService:
                     sender_info = self.extract_sender_info(from_header)
                     body = self.extract_email_body(msg)
                     
-                    logger.info(f"📧 E-mail de {sender_info['email']}: {subject[:50]}")
+                    logger.info(f"📧 Analisando e-mail de {sender_info['email']}")
+                    logger.info(f"   Assunto: {subject[:80]}")
+                    logger.info(f"   Corpo (preview): {body[:150]}")
                     
-                    # Verifica se é relacionado a seguros
+                    # Verifica se é relacionado a seguros usando IA
                     if self.is_insurance_related(subject, body):
-                        logger.info(f"✅ E-mail relacionado a seguros detectado")
+                        logger.info(f"✅ E-mail RELEVANTE - Criando lead")
                         
                         # Processa o e-mail
                         success = await self.process_insurance_email(
@@ -381,7 +421,7 @@ class EmailReaderService:
                         if success:
                             processed += 1
                     else:
-                        logger.info(f"⏭️  E-mail não relacionado a seguros, ignorando")
+                        logger.info(f"⏭️  E-mail NÃO RELEVANTE - Ignorando (não é sobre seguro/consórcio)")
                 
                 except Exception as e:
                     logger.error(f"Erro ao processar e-mail individual: {str(e)}")
