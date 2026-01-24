@@ -26,7 +26,7 @@ class FlowManager:
             "vehicle_usage", "has_young_driver"
         ],
         "seguro_residencial": [
-            "name", "whatsapp_contact", "property_cep", "property_type",
+            "name", "cpf_cnpj", "whatsapp_contact", "property_cep", "property_type",
             "property_value", "property_ownership"
         ],
         "seguro_vida": [
