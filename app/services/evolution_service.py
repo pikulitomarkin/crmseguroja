@@ -45,8 +45,9 @@ class EvolutionService:
             True se enviado com sucesso
         """
         try:
+            # Envia indicador de digitação e mensagem em paralelo para ser mais rápido
             if show_typing:
-                await self._send_typing_indicator(whatsapp_number)
+                asyncio.create_task(self._send_typing_indicator(whatsapp_number))
                 await asyncio.sleep(settings.TYPING_DELAY)
             
             url = f"{self.base_url}/message/sendText/{self.instance_name}"

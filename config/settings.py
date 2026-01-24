@@ -61,7 +61,7 @@ class Settings:
     
     # Sistema
     MAX_RETRIES = 3
-    TYPING_DELAY = 1  # segundos para mostrar "digitando..."
+    TYPING_DELAY = 0.5  # segundos para mostrar "digitando..." (reduzido para respostas mais rápidas)
     QUALIFICATION_COMPLETE_THRESHOLD = 0.8  # 80% dos campos preenchidos
 
 
