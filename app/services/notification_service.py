@@ -335,11 +335,11 @@ Email: {lead_data.get('email', 'N/A')}
                 )
             
             return email_sent or whatsapp_sent
-        
         except Exception as e:
             print(f"Erro ao notificar admin: {str(e)}")
             return False
-        async def notify_admin_outros_assuntos(self, lead_data: Dict, whatsapp_number: str) -> bool:
+
+    async def notify_admin_outros_assuntos(self, lead_data: Dict, whatsapp_number: str) -> bool:
         """
         Notifica admin sobre outros assuntos (não é lead qualificado)
         Envia apenas notificação com dados básicos
@@ -347,7 +347,7 @@ Email: {lead_data.get('email', 'N/A')}
         Args:
             lead_data: Dicionário com dados coletados
             whatsapp_number: Número do WhatsApp
-            
+        
         Returns:
             True se notificação foi enviada com sucesso
         """
