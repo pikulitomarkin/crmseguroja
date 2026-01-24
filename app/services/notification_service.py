@@ -384,7 +384,6 @@ Email: {lead_data.get('email', 'N/A')}
                     print(f"[NOTIFICATION] ❌ ADMIN_WHATSAPP inválido: '{admin_number}' (deve ter pelo menos 10 dígitos)")
             else:
                 print(f"[NOTIFICATION] ⚠️ ADMIN_WHATSAPP não configurado nas variáveis de ambiente")
-                    print(f"ADMIN_WHATSAPP inválido: '{admin_number}' (deve ter pelo menos 10 dígitos)")
             
             # Email simplificado (opcional)
             email_sent = False
