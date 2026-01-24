@@ -89,6 +89,17 @@ class FlowManager:
         """
         message = message.lower().strip()
         
+        # Detecta por número
+        if message == "1":
+            return "seguro_auto"
+        if message == "2":
+            return "seguro_residencial"
+        if message == "3":
+            return "seguro_vida"
+        if message == "4":
+            return "seguro_empresarial"
+        
+        # Detecta por palavra-chave
         if "auto" in message or "carro" in message or "veículo" in message or "veiculo" in message:
             return "seguro_auto"
         if "residencial" in message or "casa" in message or "imóvel" in message or "imovel" in message or "apartamento" in message:
