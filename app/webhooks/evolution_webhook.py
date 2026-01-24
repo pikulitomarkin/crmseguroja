@@ -451,16 +451,29 @@ async def process_message(whatsapp_number: str, message_text: str):
             "flow_step": current_step
         }
         
-        # Extrai dados específicos do fluxo atual
+        # Extrai dados específicos do fluxo atual DA CONVERSA COMPLETA
         if flow_type:
+            logger.info(f"[{whatsapp_number}] Extraindo dados do fluxo {flow_type} da conversa...")
             extracted = ai_service.extract_lead_data_from_conversation(conversation, flow_type)
-            # Atualiza lead com dados extraídos
-            for key, value in extracted.items():
-                if value and value != "null" and not lead_dict.get(key):
-                    lead_dict[key] = value
-                    setattr(lead, key, value)
+            logger.info(f"[{whatsapp_number}] Dados extraídos pela IA: {extracted}")
             
-            db.commit()
+            # Atualiza lead com dados extraídos (substitui valores vazios/None)
+            updated_fields = []
+            for key, value in extracted.items():
+                # Só atualiza se o valor extraído for válido
+                if value and value != "null" and value != "None" and str(value).strip():
+                    # Atualiza mesmo que já exista (para pegar atualizações)
+                    old_value = lead_dict.get(key)
+                    if old_value != value:
+                        lead_dict[key] = value
+                        setattr(lead, key, value)
+                        updated_fields.append(f"{key}={value}")
+            
+            if updated_fields:
+                logger.info(f"[{whatsapp_number}] Campos atualizados: {', '.join(updated_fields)}")
+                db.commit()
+            else:
+                logger.info(f"[{whatsapp_number}] Nenhum campo novo extraído desta mensagem")
         
         # 7. Verifica campos obrigatórios faltantes
         missing_fields = flow_manager.get_missing_fields(flow_type, lead_dict) if flow_type else []

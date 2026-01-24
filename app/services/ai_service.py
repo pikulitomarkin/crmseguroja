@@ -190,6 +190,24 @@ class AIService:
                     "property_ownership": "próprio ou alugado ou null",
                     "interest": "observações ou informações extras mencionadas ou null"
                 },
+                "seguro_vida": {
+                    "name": "nome completo ou null",
+                    "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
+                    "phone": "telefone (apenas números) ou null",
+                    "whatsapp_contact": "WhatsApp (apenas números) ou null",
+                    "email": "e-mail ou null",
+                    "interest": "observações, tipo de cobertura desejada ou informações extras ou null",
+                    "necessity": "necessidades ou situação familiar mencionada ou null"
+                },
+                "seguro_empresarial": {
+                    "name": "nome completo ou null",
+                    "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
+                    "phone": "telefone (apenas números) ou null",
+                    "whatsapp_contact": "WhatsApp (apenas números) ou null",
+                    "email": "e-mail ou null",
+                    "interest": "tipo de empresa, ramo de atividade ou informações extras ou null",
+                    "necessity": "necessidades específicas da empresa ou null"
+                },
                 "consorcio": {
                     "name": "nome completo ou null",
                     "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
@@ -233,10 +251,20 @@ class AIService:
             
             # Cria prompt de extração
             fields_json = json.dumps(fields, ensure_ascii=False, indent=2)
-            extraction_prompt = f"""Analise esta conversa e extraia os seguintes dados em JSON válido:
+            extraction_prompt = f"""Analise TODA a conversa abaixo e extraia TODOS os dados mencionados pelo usuário.
+
+IMPORTANTE:
+- Extraia TODOS os dados que o usuário forneceu nas mensagens
+- Se o usuário mencionou um valor mas depois corrigiu, use o valor MAIS RECENTE
+- Para CPF/CNPJ, telefone, CEP: retorne APENAS números (sem pontos, traços ou espaços)
+- Para campos booleanos (true/false): retorne true ou false baseado na resposta do usuário
+- Se um dado NÃO foi mencionado, retorne null
+- Se o usuário disse "não tenho", "não quero", "nenhum": retorne null para aquele campo
+
+Campos a extrair:
 {fields_json}
 
-Retorne APENAS JSON válido, sem explicação adicional."""
+Retorne APENAS JSON válido no formato acima, sem explicação adicional."""
             
             messages.append({
                 "role": "user",

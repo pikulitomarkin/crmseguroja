@@ -157,95 +157,157 @@ class NotificationService:
             
             # Monta mensagem baseada no tipo de fluxo
             if flow_type == 'seguro_auto':
-                # Monta informações extras se houver
+                # Coleta TODOS os dados disponíveis
+                dados_principais = []
+                if lead_data.get('name'):
+                    dados_principais.append(f"👤 Nome: {lead_data.get('name')}")
+                dados_principais.append(f"📱 WhatsApp: {whatsapp_number}")
+                if lead_data.get('cpf_cnpj'):
+                    dados_principais.append(f"🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj')}")
+                if lead_data.get('vehicle_plate'):
+                    dados_principais.append(f"🚙 Placa: {lead_data.get('vehicle_plate')}")
+                
+                contato = []
+                if lead_data.get('phone'):
+                    contato.append(f"📞 Telefone: {lead_data.get('phone')}")
+                if lead_data.get('email'):
+                    contato.append(f"📧 Email: {lead_data.get('email')}")
+                if lead_data.get('second_email'):
+                    contato.append(f"📧 Email 2: {lead_data.get('second_email')}")
+                
+                dados_complementares = []
+                if lead_data.get('cep_pernoite'):
+                    dados_complementares.append(f"📍 CEP Pernoite: {lead_data.get('cep_pernoite')}")
+                if lead_data.get('profession'):
+                    dados_complementares.append(f"🏢 Profissão: {lead_data.get('profession')}")
+                if lead_data.get('marital_status'):
+                    dados_complementares.append(f"💍 Estado Civil: {lead_data.get('marital_status')}")
+                if lead_data.get('vehicle_usage'):
+                    dados_complementares.append(f"🎯 Uso: {lead_data.get('vehicle_usage')}")
+                if lead_data.get('has_young_driver') is not None:
+                    dados_complementares.append(f"👨‍👦 Condutor < 26 anos: {lead_data.get('has_young_driver')}")
+                
                 extras = []
                 if lead_data.get('interest'):
-                    extras.append(f"📝 Interesse/Observações: {lead_data.get('interest')}")
+                    extras.append(f"📝 Observações: {lead_data.get('interest')}")
                 if lead_data.get('necessity'):
                     extras.append(f"📝 Necessidade: {lead_data.get('necessity')}")
                 
-                extras_text = "\n".join(extras) if extras else ""
+                # Monta mensagem apenas com dados disponíveis
+                msg_parts = [f"🔔 *NOVO LEAD - SEGURO AUTO*\n"]
                 
-                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - SEGURO AUTO*
-
-📋 *DADOS PRINCIPAIS:*
-👤 Nome: {lead_data.get('name', 'N/A')}
-📱 WhatsApp: {whatsapp_number}
-🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
-🚙 Placa: {lead_data.get('vehicle_plate', 'N/A')}
-
-📧 *CONTATO:*
-Email: {lead_data.get('email', 'N/A')}
-{f"Email 2: {lead_data.get('second_email')}" if lead_data.get('second_email') else ""}
-
-🚗 *DADOS COMPLEMENTARES:*
-📍 CEP Pernoite: {lead_data.get('cep_pernoite', 'N/A')}
-🏢 Profissão: {lead_data.get('profession', 'N/A')}
-💍 Estado Civil: {lead_data.get('marital_status', 'N/A')}
-🎯 Uso: {lead_data.get('vehicle_usage', 'N/A')}
-👨‍👦 Condutor < 26 anos: {lead_data.get('has_young_driver', 'N/A')}
-{f"\n💬 *INFORMAÇÕES EXTRAS:*\n{extras_text}" if extras_text else ""}
-
----
-💡 *Entre em contato imediatamente!*"""
+                if dados_principais:
+                    msg_parts.append("📋 *DADOS PRINCIPAIS:*")
+                    msg_parts.extend(dados_principais)
+                    msg_parts.append("")
+                
+                if contato:
+                    msg_parts.append("📧 *CONTATO:*")
+                    msg_parts.extend(contato)
+                    msg_parts.append("")
+                
+                if dados_complementares:
+                    msg_parts.append("🚗 *DADOS COMPLEMENTARES:*")
+                    msg_parts.extend(dados_complementares)
+                    msg_parts.append("")
+                
+                if extras:
+                    msg_parts.append("💬 *INFORMAÇÕES EXTRAS:*")
+                    msg_parts.extend(extras)
+                    msg_parts.append("")
+                
+                msg_parts.append("---")
+                msg_parts.append("💡 *Entre em contato imediatamente!*")
+                
+                whatsapp_msg = "\n".join(msg_parts)
 
             elif flow_type == 'seguro_residencial':
-                # Informações extras
-                extras = []
+                dados_cliente = []
+                if lead_data.get('name'):
+                    dados_cliente.append(f"👤 Nome: {lead_data.get('name')}")
+                dados_cliente.append(f"📱 WhatsApp: {whatsapp_number}")
                 if lead_data.get('cpf_cnpj'):
-                    extras.append(f"🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj')}")
+                    dados_cliente.append(f"🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj')}")
+                if lead_data.get('email'):
+                    dados_cliente.append(f"📧 Email: {lead_data.get('email')}")
+                if lead_data.get('phone'):
+                    dados_cliente.append(f"📞 Telefone: {lead_data.get('phone')}")
+                
+                dados_imovel = []
+                if lead_data.get('property_cep'):
+                    dados_imovel.append(f"📍 CEP: {lead_data.get('property_cep')}")
+                if lead_data.get('property_type'):
+                    dados_imovel.append(f"🏢 Tipo: {lead_data.get('property_type')}")
+                if lead_data.get('property_value'):
+                    dados_imovel.append(f"💰 Valor: {lead_data.get('property_value')}")
+                if lead_data.get('property_ownership'):
+                    dados_imovel.append(f"🔑 Situação: {lead_data.get('property_ownership')}")
+                
+                extras = []
                 if lead_data.get('interest'):
                     extras.append(f"📝 Observações: {lead_data.get('interest')}")
-                if lead_data.get('phone'):
-                    extras.append(f"📞 Telefone: {lead_data.get('phone')}")
                 
-                extras_text = "\n".join(extras) if extras else ""
-                
-                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - SEGURO RESIDENCIAL*
-
-📋 *DADOS DO CLIENTE:*
-👤 Nome: {lead_data.get('name', 'N/A')}
-📱 WhatsApp: {whatsapp_number}
-📧 Email: {lead_data.get('email', 'N/A')}
-
-🏠 *DADOS DO IMÓVEL:*
-📍 CEP: {lead_data.get('property_cep', 'N/A')}
-🏢 Tipo: {lead_data.get('property_type', 'N/A')}
-💰 Valor: {lead_data.get('property_value', 'N/A')}
-🔑 Situação: {lead_data.get('property_ownership', 'N/A')}
-{f"\n💬 *INFORMAÇÕES EXTRAS:*\n{extras_text}" if extras_text else ""}
-
----
-💡 *Entre em contato imediatamente!*"""
+                msg_parts = [f"🔔 *NOVO LEAD - SEGURO RESIDENCIAL*\n"]
+                if dados_cliente:
+                    msg_parts.append("📋 *DADOS DO CLIENTE:*")
+                    msg_parts.extend(dados_cliente)
+                    msg_parts.append("")
+                if dados_imovel:
+                    msg_parts.append("🏠 *DADOS DO IMÓVEL:*")
+                    msg_parts.extend(dados_imovel)
+                    msg_parts.append("")
+                if extras:
+                    msg_parts.append("💬 *INFORMAÇÕES EXTRAS:*")
+                    msg_parts.extend(extras)
+                    msg_parts.append("")
+                msg_parts.append("---")
+                msg_parts.append("💡 *Entre em contato imediatamente!*")
+                whatsapp_msg = "\n".join(msg_parts)
 
             elif flow_type == 'consorcio':
-                # Informações extras
-                extras = []
+                dados_cliente = []
+                if lead_data.get('name'):
+                    dados_cliente.append(f"👤 Nome: {lead_data.get('name')}")
+                if lead_data.get('cpf_cnpj'):
+                    dados_cliente.append(f"🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj')}")
+                dados_cliente.append(f"📱 WhatsApp: {whatsapp_number}")
+                if lead_data.get('email'):
+                    dados_cliente.append(f"📧 Email: {lead_data.get('email')}")
+                if lead_data.get('second_email'):
+                    dados_cliente.append(f"📧 Email 2: {lead_data.get('second_email')}")
                 if lead_data.get('phone'):
-                    extras.append(f"📞 Telefone: {lead_data.get('phone')}")
+                    dados_cliente.append(f"📞 Telefone: {lead_data.get('phone')}")
+                
+                dados_consorcio = []
+                if lead_data.get('consortium_type'):
+                    dados_consorcio.append(f"📝 Tipo: {lead_data.get('consortium_type')}")
+                if lead_data.get('consortium_value'):
+                    dados_consorcio.append(f"💰 Valor da Carta: {lead_data.get('consortium_value')}")
+                if lead_data.get('consortium_term'):
+                    dados_consorcio.append(f"📅 Prazo: {lead_data.get('consortium_term')} meses")
+                if lead_data.get('has_previous_consortium') is not None:
+                    dados_consorcio.append(f"🔄 Já participou antes: {lead_data.get('has_previous_consortium')}")
+                
+                extras = []
                 if lead_data.get('interest'):
                     extras.append(f"📝 Observações: {lead_data.get('interest')}")
                 
-                extras_text = "\n".join(extras) if extras else ""
-                
-                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - CONSÓRCIO*
-
-📋 *DADOS DO CLIENTE:*
-👤 Nome: {lead_data.get('name', 'N/A')}
-🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
-📱 WhatsApp: {whatsapp_number}
-📧 Email: {lead_data.get('email', 'N/A')}
-{f"📧 Email 2: {lead_data.get('second_email')}" if lead_data.get('second_email') else ""}
-
-💼 *DADOS DO CONSÓRCIO:*
-📝 Tipo: {lead_data.get('consortium_type', 'N/A')}
-💰 Valor da Carta: {lead_data.get('consortium_value', 'N/A')}
-📅 Prazo: {lead_data.get('consortium_term', 'N/A')} meses
-🔄 Já participou antes: {lead_data.get('has_previous_consortium', 'N/A')}
-{f"\n💬 *INFORMAÇÕES EXTRAS:*\n{extras_text}" if extras_text else ""}
-
----
-💡 *Entre em contato imediatamente!*"""
+                msg_parts = [f"🔔 *NOVO LEAD - CONSÓRCIO*\n"]
+                if dados_cliente:
+                    msg_parts.append("📋 *DADOS DO CLIENTE:*")
+                    msg_parts.extend(dados_cliente)
+                    msg_parts.append("")
+                if dados_consorcio:
+                    msg_parts.append("💼 *DADOS DO CONSÓRCIO:*")
+                    msg_parts.extend(dados_consorcio)
+                    msg_parts.append("")
+                if extras:
+                    msg_parts.append("💬 *INFORMAÇÕES EXTRAS:*")
+                    msg_parts.extend(extras)
+                    msg_parts.append("")
+                msg_parts.append("---")
+                msg_parts.append("💡 *Entre em contato imediatamente!*")
+                whatsapp_msg = "\n".join(msg_parts)
 
             elif flow_type == 'seguro_vida':
                 # Informações extras
