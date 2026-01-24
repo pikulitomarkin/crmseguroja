@@ -239,6 +239,54 @@ Email: {lead_data.get('email', 'N/A')}
 ---
 💡 *Entre em contato imediatamente!*"""
 
+            elif flow_type == 'seguro_vida':
+                # Informações extras
+                extras = []
+                if lead_data.get('interest'):
+                    extras.append(f"📝 Observações: {lead_data.get('interest')}")
+                if lead_data.get('necessity'):
+                    extras.append(f"📝 Necessidade: {lead_data.get('necessity')}")
+                if lead_data.get('phone'):
+                    extras.append(f"📞 Telefone: {lead_data.get('phone')}")
+                
+                extras_text = "\n".join(extras) if extras else ""
+                
+                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - SEGURO DE VIDA*
+
+📋 *DADOS DO CLIENTE:*
+👤 Nome: {lead_data.get('name', 'N/A')}
+🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
+📱 WhatsApp: {whatsapp_number}
+📧 Email: {lead_data.get('email', 'N/A')}
+{f"\n💬 *INFORMAÇÕES EXTRAS:*\n{extras_text}" if extras_text else ""}
+
+---
+💡 *Entre em contato imediatamente!*"""
+
+            elif flow_type == 'seguro_empresarial':
+                # Informações extras
+                extras = []
+                if lead_data.get('interest'):
+                    extras.append(f"📝 Observações: {lead_data.get('interest')}")
+                if lead_data.get('necessity'):
+                    extras.append(f"📝 Necessidade: {lead_data.get('necessity')}")
+                if lead_data.get('phone'):
+                    extras.append(f"📞 Telefone: {lead_data.get('phone')}")
+                
+                extras_text = "\n".join(extras) if extras else ""
+                
+                whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - SEGURO EMPRESARIAL*
+
+📋 *DADOS DO CLIENTE:*
+👤 Nome: {lead_data.get('name', 'N/A')}
+🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
+📱 WhatsApp: {whatsapp_number}
+📧 Email: {lead_data.get('email', 'N/A')}
+{f"\n💬 *INFORMAÇÕES EXTRAS:*\n{extras_text}" if extras_text else ""}
+
+---
+💡 *Entre em contato imediatamente!*"""
+
             elif flow_type == 'segunda_via':
                 # Inclui o produto desejado (interest)
                 whatsapp_msg = f"""🔔 *SOLICITAÇÃO - SEGUNDA VIA*
