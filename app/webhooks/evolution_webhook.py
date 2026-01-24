@@ -98,6 +98,52 @@ async def health():
         "running": email_scheduler.is_running,
         "next_run": email_scheduler.get_next_run_time().isoformat() if email_scheduler.get_next_run_time() else None
     }
+
+
+# Lista para armazenar últimos eventos recebidos (debug)
+recent_events = []
+
+@app.post("/webhook/evolution/debug")
+async def webhook_debug_handler(request: Request):
+    """
+    Webhook DEBUG - captura TODOS os eventos sem filtro
+    Use esta URL temporariamente na Evolution API para debug
+    """
+    try:
+        payload = await request.json()
+        event = payload.get('event', 'unknown')
+        
+        # Armazena últimos 20 eventos
+        event_info = {
+            "timestamp": datetime.now().isoformat(),
+            "event": event,
+            "payload_keys": list(payload.keys()),
+            "data_type": str(type(payload.get('data'))),
+            "instance": payload.get('instance', 'unknown')
+        }
+        
+        recent_events.append(event_info)
+        if len(recent_events) > 20:
+            recent_events.pop(0)
+        
+        logger.info(f"[DEBUG WEBHOOK] Evento: {event} | Instance: {payload.get('instance', 'N/A')}")
+        logger.info(f"[DEBUG WEBHOOK] Payload completo: {payload}")
+        
+        return JSONResponse({"status": "ok", "event_logged": event}, status_code=200)
+    except Exception as e:
+        logger.error(f"[DEBUG WEBHOOK] Erro: {str(e)}")
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+@app.get("/webhook/evolution/debug/events")
+async def get_recent_events():
+    """
+    Retorna últimos eventos recebidos (para debug)
+    """
+    return JSONResponse({
+        "total_events": len(recent_events),
+        "events": recent_events
+    }, status_code=200)
     
     return {
         "status": "healthy" if db_status == "connected" else "degraded",
@@ -169,6 +215,13 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks, e
         payload = await request.json()
         event = payload.get('event', 'unknown')
         logger.info(f"Webhook recebido [{event_type}]: {event}")
+        
+        # LOG DETALHADO: mostra estrutura completa do payload para debug
+        if event == 'messages.upsert' or event == 'messages-upsert':
+            logger.info(f"[WEBHOOK] ✅ MESSAGES.UPSERT recebido! Payload keys: {list(payload.keys())}")
+            logger.info(f"[WEBHOOK] Data keys: {list(payload.get('data', {}).keys())}")
+        else:
+            logger.info(f"[WEBHOOK] ⚠️ Evento {event} ignorado (aguardando messages.upsert)")
         
         # Ignora eventos que não são mensagens
         if event not in ['messages.upsert', 'messages-upsert']:
