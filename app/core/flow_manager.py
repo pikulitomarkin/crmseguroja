@@ -18,32 +18,28 @@ class FlowManager:
         "6": "outros_assuntos"
     }
     
-    # Campos obrigatórios por fluxo (second_email é sempre opcional)
+    # Campos obrigatórios por fluxo (REDUZIDOS - apenas dados essenciais)
+    # Todos os outros campos serão coletados mas não são obrigatórios para qualificação
     REQUIRED_FIELDS = {
         "seguro_auto": [
-            "cpf_cnpj", "vehicle_plate", "whatsapp_contact",
-            "cep_pernoite", "profession", "marital_status", 
-            "vehicle_usage", "has_young_driver"
+            "whatsapp_contact"  # Apenas o contato é obrigatório
         ],
         "seguro_residencial": [
-            "name", "cpf_cnpj", "whatsapp_contact", "property_cep", "property_type",
-            "property_value", "property_ownership"
+            "whatsapp_contact"  # Apenas o contato é obrigatório
         ],
         "seguro_vida": [
-            "name", "whatsapp_contact", "cpf_cnpj", "email"
+            "whatsapp_contact"  # Apenas o contato é obrigatório
         ],
         "seguro_empresarial": [
-            "name", "whatsapp_contact", "cpf_cnpj", "email"
+            "whatsapp_contact"  # Apenas o contato é obrigatório
         ],
         "consorcio": [
-            "cpf_cnpj", "whatsapp_contact", "email",
-            "consortium_type", "consortium_value", "consortium_term"
+            "whatsapp_contact"  # Apenas o contato é obrigatório
         ],
-        # Para segunda via, só exige nome, cpf_cnpj e produto (interest)
-        "segunda_via": ["name", "cpf_cnpj", "interest"],
-        "sinistro": ["name", "cpf_cnpj", "whatsapp_contact"],
-        "falar_humano": ["name", "cpf_cnpj", "whatsapp_contact"],
-        "outros_assuntos": ["name", "whatsapp_contact", "interest"]
+        "segunda_via": ["whatsapp_contact"],
+        "sinistro": ["whatsapp_contact"],
+        "falar_humano": ["whatsapp_contact"],
+        "outros_assuntos": ["whatsapp_contact"]
     }
     
     def detect_menu_choice(self, message: str) -> Optional[str]:
