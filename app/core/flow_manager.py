@@ -37,8 +37,7 @@ class FlowManager:
         ],
         "consorcio": [
             "cpf_cnpj", "whatsapp_contact", "email",
-            "consortium_type", "consortium_value", "consortium_term",
-            "has_previous_consortium"
+            "consortium_type", "consortium_value", "consortium_term"
         ],
         "segunda_via": ["name", "cpf_cnpj", "whatsapp_contact"],
         "sinistro": ["name", "cpf_cnpj", "whatsapp_contact"],
