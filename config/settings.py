@@ -48,7 +48,7 @@ class Settings:
     EMAIL_MAX_PROCESS = int(os.getenv("EMAIL_MAX_PROCESS", "10"))  # máx e-mails por vez
     
     # Notificações
-    ADMIN_WHATSAPP = os.getenv("ADMIN_WHATSAPP", "")  # Número do admin para receber notificações
+    ADMIN_WHATSAPP = os.getenv("ADMIN_WHATSAPP", "5511965209976")  # Número do admin para receber notificações
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")  # Email do admin
     
     # FastAPI
