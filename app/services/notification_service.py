@@ -151,15 +151,17 @@ class NotificationService:
             if flow_type == 'seguro_auto':
                 whatsapp_msg = f"""🔔 *NOVO LEAD QUALIFICADO - SEGURO AUTO*
 
-📋 *DADOS DO CLIENTE:*
+📋 *DADOS PRINCIPAIS:*
 👤 Nome: {lead_data.get('name', 'N/A')}
 📱 WhatsApp: {whatsapp_number}
-📧 Email: {lead_data.get('email', 'N/A')}
-{f"📧 Email 2: {lead_data.get('second_email')}" if lead_data.get('second_email') else ""}
-
-🚗 *DADOS DO VEÍCULO:*
 🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
 🚙 Placa: {lead_data.get('vehicle_plate', 'N/A')}
+
+📧 *CONTATO:*
+Email: {lead_data.get('email', 'N/A')}
+{f"Email 2: {lead_data.get('second_email')}" if lead_data.get('second_email') else ""}
+
+🚗 *DADOS COMPLEMENTARES:*
 📍 CEP Pernoite: {lead_data.get('cep_pernoite', 'N/A')}
 🏢 Profissão: {lead_data.get('profession', 'N/A')}
 💍 Estado Civil: {lead_data.get('marital_status', 'N/A')}
