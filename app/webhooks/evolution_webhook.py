@@ -276,14 +276,7 @@ async def process_message(whatsapp_number: str, message_text: str):
         db.commit()
         logger.info(f"[{whatsapp_number}] Mensagem do usuário salva")
         
-        # 3. Verifica se IA deve responder
-        if not LeadService.is_ia_active(db, whatsapp_number):
-            logger.info(f"[{whatsapp_number}] IA desativada - humano está atendendo")
-            elapsed = time.time() - start_time
-            logger.info(f"[{whatsapp_number}] ✅ Mensagem registrada em {elapsed:.2f}s")
-            return
-        
-        # 4. Inicializa serviços
+        # 3. Inicializa serviços (IA sempre responde)
         ai_service = get_ai_service()
         flow_manager = FlowManager()
         qualification_engine = get_qualification_engine()
