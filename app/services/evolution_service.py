@@ -57,6 +57,9 @@ class EvolutionService:
                 "text": message
             }
             
+            print(f"[EVOLUTION] POST {url}")
+            print(f"[EVOLUTION] Payload: number={whatsapp_number}, text_length={len(message)}")
+            
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     url,
@@ -64,11 +67,15 @@ class EvolutionService:
                     headers=self._get_headers(),
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
+                    response_text = await response.text()
+                    print(f"[EVOLUTION] Response Status: {response.status}")
+                    print(f"[EVOLUTION] Response Body: {response_text[:200]}...")
+                    
                     if response.status in [200, 201]:
+                        print(f"[EVOLUTION] ✅ Mensagem enviada com sucesso")
                         return True
                     else:
-                        error_text = await response.text()
-                        print(f"Erro ao enviar mensagem: {response.status} - {error_text}")
+                        print(f"[EVOLUTION] ❌ Erro ao enviar mensagem: {response.status} - {response_text}")
                         return False
         
         except Exception as e:
@@ -121,4 +128,15 @@ class EvolutionService:
         Returns:
             True se enviado com sucesso
         """
-        return await self.send_message(whatsapp_number, message, show_typing=False)
+        print(f"[EVOLUTION] Enviando notificação para: {whatsapp_number}")
+        print(f"[EVOLUTION] URL base: {self.base_url}")
+        print(f"[EVOLUTION] Instance: {self.instance_name}")
+        
+        result = await self.send_message(whatsapp_number, message, show_typing=False)
+        
+        if result:
+            print(f"[EVOLUTION] ✅ Notificação enviada com sucesso para {whatsapp_number}")
+        else:
+            print(f"[EVOLUTION] ❌ Falha ao enviar notificação para {whatsapp_number}")
+        
+        return result

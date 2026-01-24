@@ -107,7 +107,15 @@ class NotificationService:
             True se enviado com sucesso
         """
         try:
+            print(f"[NOTIFICATION] Tentando enviar WhatsApp para: {whatsapp_number}")
+            print(f"[NOTIFICATION] Tamanho da mensagem: {len(message)} caracteres")
+            
             success = await self.evolution.send_notification(whatsapp_number, message)
+            
+            if success:
+                print(f"[NOTIFICATION] ✅ WhatsApp enviado com sucesso para {whatsapp_number}")
+            else:
+                print(f"[NOTIFICATION] ❌ Falha ao enviar WhatsApp para {whatsapp_number}")
             
             if self.db:
                 self._log_notification(
@@ -119,7 +127,7 @@ class NotificationService:
             return success
         
         except Exception as e:
-            print(f"Erro ao enviar notificação WhatsApp: {str(e)}")
+            print(f"[NOTIFICATION] ❌ ERRO ao enviar notificação WhatsApp para {whatsapp_number}: {str(e)}")
             if self.db:
                 self._log_notification(
                     recipient=whatsapp_number,
@@ -363,13 +371,19 @@ Email: {lead_data.get('email', 'N/A')}
             whatsapp_sent = False
             if settings.ADMIN_WHATSAPP:
                 admin_number = settings.ADMIN_WHATSAPP.strip()
+                print(f"[NOTIFICATION] ADMIN_WHATSAPP configurado: {admin_number}")
                 # Valida que o número tem pelo menos 10 dígitos (código país + DDD + número)
                 if len(admin_number) >= 10:
+                    print(f"[NOTIFICATION] Enviando notificação de lead ({flow_type}) para admin...")
                     whatsapp_sent = await self.send_whatsapp_notification(
                         admin_number,
                         whatsapp_msg
                     )
+                    print(f"[NOTIFICATION] Resultado do envio ao admin: {'✅ Sucesso' if whatsapp_sent else '❌ Falha'}")
                 else:
+                    print(f"[NOTIFICATION] ❌ ADMIN_WHATSAPP inválido: '{admin_number}' (deve ter pelo menos 10 dígitos)")
+            else:
+                print(f"[NOTIFICATION] ⚠️ ADMIN_WHATSAPP não configurado nas variáveis de ambiente")
                     print(f"ADMIN_WHATSAPP inválido: '{admin_number}' (deve ter pelo menos 10 dígitos)")
             
             # Email simplificado (opcional)
@@ -414,6 +428,19 @@ Email: {lead_data.get('email', 'N/A')}
             whatsapp_sent = False
             if settings.ADMIN_WHATSAPP:
                 admin_number = settings.ADMIN_WHATSAPP.strip()
+                print(f"[NOTIFICATION] ADMIN_WHATSAPP configurado: {admin_number}")
+                # Valida que o número tem pelo menos 10 dígitos (código país + DDD + número)
+                if len(admin_number) >= 10:
+                    print(f"[NOTIFICATION] Enviando notificação de outros assuntos para admin...")
+                    whatsapp_sent = await self.send_whatsapp_notification(
+                        admin_number,
+                        whatsapp_msg
+                    )
+                    print(f"[NOTIFICATION] Resultado do envio ao admin: {'✅ Sucesso' if whatsapp_sent else '❌ Falha'}")
+                else:
+                    print(f"[NOTIFICATION] ❌ ADMIN_WHATSAPP inválido: '{admin_number}' (deve ter pelo menos 10 dígitos)")
+            else:
+                print(f"[NOTIFICATION] ⚠️ ADMIN_WHATSAPP não configurado nas variáveis de ambiente")
                 # Valida que o número tem pelo menos 10 dígitos (código país + DDD + número)
                 if len(admin_number) >= 10:
                     whatsapp_sent = await self.send_whatsapp_notification(
