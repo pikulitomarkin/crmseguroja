@@ -207,7 +207,11 @@ with tab1:
                 
                 with col1:
                     st.markdown(f"**{lead.name or 'Sem nome'}**")
-                    st.caption(f"📱 {lead.whatsapp_number}")
+                    # Remove o 9 inicial se houver (apenas visual)
+                    phone = lead.whatsapp_number
+                    if phone and len(phone) >= 11 and phone[2] == '9':
+                        phone = phone[:2] + phone[3:]
+                    st.caption(f"📱 {phone}")
                 
                 with col2:
                     st.markdown(f"**Interesse:** {lead.interest or 'N/A'}")
@@ -289,7 +293,11 @@ with tab2:
             df_data.append({
                 "ID": lead.id,
                 "Nome": lead.name or "—",
-                "WhatsApp": lead.whatsapp_number,
+                # Remove o 9 inicial se houver (apenas visual)
+                phone = lead.whatsapp_number
+                if phone and len(phone) >= 11 and phone[2] == '9':
+                    phone = phone[:2] + phone[3:]
+                "WhatsApp": phone,
                 "Status": lead.status,
                 "Tipo": lead.customer_type,
                 "IA Ativa": "✅" if lead.status_ia == 1 else "❌",
@@ -311,7 +319,11 @@ with tab3:
     else:
         # Selector de lead
         lead_options = {
-            f"{lead.name or 'Sem nome'} ({lead.whatsapp_number})": lead.id
+            # Remove o 9 inicial se houver (apenas visual)
+            phone = lead.whatsapp_number
+            if phone and len(phone) >= 11 and phone[2] == '9':
+                phone = phone[:2] + phone[3:]
+            f"{lead.name or 'Sem nome'} ({phone})": lead.id
             for lead in leads
         }
         
@@ -330,7 +342,11 @@ with tab3:
             with col1:
                 st.markdown("### 👤 Informações")
                 st.markdown(f"**Nome:** {lead.name or 'Não preenchido'}")
-                st.markdown(f"**WhatsApp:** {lead.whatsapp_number}")
+                # Remove o 9 inicial se houver (apenas visual)
+                phone = lead.whatsapp_number
+                if phone and len(phone) >= 11 and phone[2] == '9':
+                    phone = phone[:2] + phone[3:]
+                st.markdown(f"**WhatsApp:** {phone}")
                 st.markdown(f"**Status:** `{lead.status}`")
                 st.markdown(f"**Tipo:** {lead.customer_type}")
             
