@@ -390,7 +390,8 @@ Email: {lead_data.get('email', 'N/A')}
         except Exception as e:
             print(f"Erro ao notificar admin sobre outros assuntos: {str(e)}")
             return False
-        def _log_notification(
+
+    def _log_notification(
         self,
         recipient: str,
         notification_type: str,
@@ -402,7 +403,6 @@ Email: {lead_data.get('email', 'N/A')}
         try:
             if not self.db:
                 return
-            
             log = NotificationLog(
                 lead_id=lead_id,
                 whatsapp_number=recipient if notification_type == "whatsapp" else None,
