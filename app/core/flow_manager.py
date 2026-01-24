@@ -40,9 +40,9 @@ class FlowManager:
             "consortium_type", "consortium_value", "consortium_term",
             "has_previous_consortium"
         ],
-        "segunda_via": ["cpf_cnpj"],
-        "sinistro": ["name", "whatsapp_contact"],
-        "outros_assuntos": ["name"]
+        "segunda_via": ["name", "cpf_cnpj", "whatsapp_contact"],
+        "sinistro": ["name", "cpf_cnpj", "whatsapp_contact"],
+        "outros_assuntos": ["name", "whatsapp_contact"]
     }
     
     def detect_menu_choice(self, message: str) -> Optional[str]:
