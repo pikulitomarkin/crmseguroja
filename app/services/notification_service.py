@@ -219,9 +219,11 @@ class NotificationService:
             elif flow_type == 'sinistro':
                 whatsapp_msg = f"""🔔 *URGENTE - SINISTRO*
 
-📋 *DADOS:*
+📋 *DADOS DO CLIENTE:*
 👤 Nome: {lead_data.get('name', 'N/A')}
+🔢 CPF/CNPJ: {lead_data.get('cpf_cnpj', 'N/A')}
 📱 WhatsApp: {whatsapp_number}
+🚙 Placa do Veículo: {lead_data.get('vehicle_plate', 'N/A')}
 
 ---
 ⚠️ *PRIORIDADE: Entrar em contato IMEDIATAMENTE!*"""
