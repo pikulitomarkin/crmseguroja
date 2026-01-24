@@ -215,10 +215,12 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks, e
             )
         
         # Ignora mensagens enviadas pelo próprio bot
+        # MAS: registra no log para debug
         if from_me:
-            logger.info(f"[{whatsapp_number}] Mensagem do bot ignorada")
+            logger.warning(f"[{whatsapp_number}] Mensagem com fromMe=true ignorada: '{message_text[:50]}'")
+            logger.warning(f"[{whatsapp_number}] Key completo: {key}")
             return JSONResponse(
-                {"status": "ok", "message": "Bot message ignored"},
+                {"status": "ok", "message": "Bot message ignored (fromMe=true)"},
                 status_code=200
             )
         
