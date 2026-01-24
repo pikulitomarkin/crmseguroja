@@ -217,14 +217,19 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks, e
         logger.info(f"Webhook recebido [{event_type}]: {event}")
         
         # LOG DETALHADO: mostra estrutura completa do payload para debug
-        if event == 'messages.upsert' or event == 'messages-upsert':
-            logger.info(f"[WEBHOOK] ✅ MESSAGES.UPSERT recebido! Payload keys: {list(payload.keys())}")
-            logger.info(f"[WEBHOOK] Data keys: {list(payload.get('data', {}).keys())}")
-        else:
-            logger.info(f"[WEBHOOK] ⚠️ Evento {event} ignorado (aguardando messages.upsert)")
+        logger.info(f"[WEBHOOK] Evento completo: {event}")
+        logger.info(f"[WEBHOOK] Payload keys: {list(payload.keys())}")
+        logger.info(f"[WEBHOOK] Data type: {type(payload.get('data'))}")
         
-        # Ignora eventos que não são mensagens
-        if event not in ['messages.upsert', 'messages-upsert']:
+        # Aceita eventos de mensagens (upsert e update)
+        # messages.update pode conter novas mensagens em algumas versões do Evolution API
+        valid_events = ['messages.upsert', 'messages-upsert', 'messages.update', 'messages-update']
+        
+        if event in valid_events:
+            logger.info(f"[WEBHOOK] ✅ Evento de mensagem recebido: {event}")
+            logger.info(f"[WEBHOOK] Data: {payload.get('data', {})}")
+        else:
+            logger.info(f"[WEBHOOK] ⚠️ Evento {event} ignorado (não é mensagem)")
             return JSONResponse(
                 {"status": "ok", "message": f"Event {event} ignored"},
                 status_code=200
@@ -241,6 +246,21 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks, e
                     status_code=200
                 )
             data = data[0]
+        
+        # Se for messages.update, verifica se é apenas atualização de status (ignorar)
+        # ou se é uma mensagem nova
+        if event in ['messages.update', 'messages-update']:
+            # Verifica se tem apenas "status" sem conteúdo de mensagem
+            status_field = data.get("status", "")
+            message_content = data.get("message", {})
+            
+            # Se tem status mas não tem conteúdo de mensagem, é apenas update de status
+            if status_field and not message_content:
+                logger.info(f"[WEBHOOK] Status update ignorado: {status_field}")
+                return JSONResponse(
+                    {"status": "ok", "message": "Status update ignored"},
+                    status_code=200
+                )
         
         instance = data.get("instanceId", "")
         
