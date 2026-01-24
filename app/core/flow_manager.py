@@ -55,24 +55,43 @@ class FlowManager:
         Returns:
             flow_type identificado ou None
         """
-        message = message.lower().strip()
+        message_lower = message.lower().strip()
+        
+        # DETECÇÃO AUTOMÁTICA DE SINISTRO (prioridade máxima)
+        sinistro_keywords = [
+            "batida", "bati", "bateu", "bateram", "colisão", "colisao", "colidi", 
+            "choque", "pancada", "acidente", "trombei", "trombada", "abalroamento",
+            "encostou", "fechada", "engavetamento", "perda total", "pt",
+            "roubo", "roubado", "roubaram", "assalto", "furto", "furtaram",
+            "levaram o carro", "levaram a moto", "sumiu", "desapareceu",
+            "capotou", "capotamento", "virou", "tombou",
+            "pegou fogo", "incêndio", "incendio", "queimou", "fogo", "curto circuito",
+            "alagou", "alagamento", "enchente", "água no carro", "carro molhou",
+            "vidro quebrado", "parabrisa", "para-brisa", "farol quebrado",
+            "atropelamento", "atropelei", "atropelou", "pedestre",
+            "sinistro", "ocorrência", "ocorrencia", "acionei o seguro", "acionar seguro"
+        ]
+        if any(keyword in message_lower for keyword in sinistro_keywords):
+            return "sinistro"
         
         # Detecta número
-        if message in self.MENU_OPTIONS:
-            return self.MENU_OPTIONS[message]
+        if message_lower in self.MENU_OPTIONS:
+            return self.MENU_OPTIONS[message_lower]
+        
+        # Volta ao menu
+        if message_lower in ["0", "menu", "voltar", "inicio"]:
+            return "menu_principal"
         
         # Detecta por palavra-chave
-        if "seguro" in message and "segunda" not in message:
+        if "seguro" in message_lower and "segunda" not in message_lower:
             return "seguro"
-        if "consórcio" in message or "consorcio" in message:
+        if "consórcio" in message_lower or "consorcio" in message_lower:
             return "consorcio"
-        if "segunda via" in message or "boleto" in message:
+        if "segunda via" in message_lower or "boleto" in message_lower:
             return "segunda_via"
-        if "sinistro" in message:
-            return "sinistro"
-        if "humano" in message or "atendente" in message or "pessoa" in message:
+        if "humano" in message_lower or "atendente" in message_lower or "pessoa" in message_lower:
             return "falar_humano"
-        if "outro" in message:
+        if "outro" in message_lower:
             return "outros_assuntos"
             
         return None

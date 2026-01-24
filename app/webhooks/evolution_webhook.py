@@ -288,11 +288,22 @@ async def process_message(whatsapp_number: str, message_text: str):
         current_step = lead.flow_step or "menu_principal"
         flow_type = lead.flow_type
         
-        # Se está no menu principal, detecta escolha
+        # Detecta se cliente quer voltar ao menu (a qualquer momento)
+        if message_text.strip() in ["0", "menu", "voltar", "inicio", "Menu", "Voltar"]:
+            current_step = "menu_principal"
+            flow_type = None
+            LeadService.update_lead(db, lead, flow_step=current_step, flow_type=flow_type)
+            db.commit()
+            logger.info(f"[{whatsapp_number}] Cliente voltou ao menu principal")
+        
+        # Se está no menu principal, detecta escolha (incluindo sinistro automático)
         if current_step == "menu_principal":
             choice = flow_manager.detect_menu_choice(message_text)
             if choice:
-                if choice == "seguro":
+                if choice == "menu_principal":
+                    # Já está no menu, apenas confirma
+                    pass
+                elif choice == "seguro":
                     # Perguntar tipo de seguro
                     current_step = "escolher_seguro"
                 elif choice == "consorcio":
