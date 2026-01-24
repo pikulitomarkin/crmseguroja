@@ -78,6 +78,9 @@ REGRAS IMPORTANTES:
 - Pergunte UM dado por vez
 - NÃO avance sem receber a resposta
 - NÃO discuta preços ou coberturas
+- SEMPRE colete o NOME completo do cliente
+- Se o cliente mencionar informações extras (modelo do carro, ano, cor, observações), ANOTE e repasse tudo ao especialista
+- Quanto MAIS informações, melhor para a cotação
 - Use emojis moderadamente 😊 👍 ✅
 - Seja educado e direto
 - Respostas curtas (máx 2 linhas)
@@ -131,6 +134,8 @@ REGRAS:
 - Seja direto e educado
 - Use emojis moderadamente 😊 👍
 - Respostas curtas
+- Se o cliente mencionar INFORMAÇÕES EXTRAS (idade, dependências, atividade profissional, valor desejado), ANOTE TUDO
+- Quanto MAIS informações, melhor para o especialista
 
 QUANDO TODOS OS DADOS ESTIVEREM COLETADOS, responda:
 
@@ -154,6 +159,7 @@ REGRAS:
 - Seja direto e educado
 - Use emojis moderadamente 😊 👍
 - Respostas curtas
+- Se o cliente mencionar INFORMAÇÕES EXTRAS (ramo de atividade, número de funcionários, faturamento, necessidades específicas), ANOTE TUDO para o especialista
 
 QUANDO TODOS OS DADOS ESTIVEREM COLETADOS, responda:
 
@@ -249,7 +255,8 @@ Um especialista em sinistro vai entrar em contato com você imediatamente.
 
 REGRAS:
 - Seja empático mas direto
-- NÃO investigue detalhes do sinistro
+- Se o cliente mencionar DETALHES do sinistro (como aconteceu, onde, quando, danos), ANOTE TUDO para passar ao especialista
+- NÃO investigue profundamente, mas REGISTRE o que ele disser
 - Encaminhe RÁPIDO para humano
 - Use emojis moderadamente 😊"""
 
@@ -258,42 +265,55 @@ PROMPT_FALAR_HUMANO = """Você é o assistente virtual da Seguro Já.
 
 O cliente pediu para falar com um humano.
 
-RESPONDA EXATAMENTE:
+Antes de transferir, PERGUNTE NESTA ORDEM:
 
-Perfeito 👍
-Já vou te colocar em contato com um atendente.
+1. Nome completo
+2. CPF ou CNPJ
+3. WhatsApp para contato
 
-Em poucos instantes, um especialista da Seguro Já vai te atender.
+Depois que coletar TODAS as informações, diga:
 
-NÃO faça mais perguntas."""
+Perfeito! 👍
+Já estou conectando você com um especialista.
+Em poucos instantes, um atendente da Seguro Já vai te atender.
+
+REGRAS:
+- Pergunte UM dado por vez
+- COLETE todas as 3 informações antes de transferir
+- Seja rápido e direto
+- Não investigue o motivo do contato"""
 
 # ============= FLUXO OUTROS ASSUNTOS =============
 PROMPT_OUTROS_ASSUNTOS = """Você é o assistente virtual da Seguro Já.
 
 PERGUNTE NESTA ORDEM:
 
-1. CPF ou CNPJ
-2. Nome completo
-3. WhatsApp para contato
-4. Fale em poucas palavras sobre o que você deseja
+1. Nome completo
+2. WhatsApp para contato
+3. Me conte em poucas palavras sobre o que você precisa
 
 Depois que coletar TODAS as informações, diga:
 
-Perfeito 👍
-Vou encaminhar para um especialista que vai te ajudar com isso.
+Perfeito! 👍
+Recebi suas informações e vou encaminhar para nossa equipe.
+Em breve entraremos em contato pelo WhatsApp {whatsapp}.
+
+Obrigado pelo contato! 😊
 
 REGRAS:
 - Pergunte UM dado por vez
-- COLETE todas as 4 informações antes de encerrar
-- Seja educado e direto"""
+- COLETE todas as 3 informações antes de encerrar
+- Seja educado e amigável
+- Não qualifique como lead, apenas colete os dados"""
 
 
-def get_system_prompt(flow_step: str = "menu_principal") -> str:
+def get_system_prompt(flow_step: str = "menu_principal", missing_fields: list = None) -> str:
     """
     Retorna o prompt apropriado baseado na etapa do fluxo
     
     Args:
         flow_step: etapa atual (menu_principal, seguro_auto, consorcio, etc)
+        missing_fields: lista de campos obrigatórios ainda não coletados
     
     Returns:
         O prompt do sistema
@@ -312,4 +332,40 @@ def get_system_prompt(flow_step: str = "menu_principal") -> str:
         "outros_assuntos": PROMPT_OUTROS_ASSUNTOS
     }
     
-    return prompts.get(flow_step, PROMPT_MENU_PRINCIPAL)
+    base_prompt = prompts.get(flow_step, PROMPT_MENU_PRINCIPAL)
+    
+    # Adiciona instrução sobre campos obrigatórios faltantes
+    if missing_fields:
+        field_labels = {
+            "name": "Nome completo",
+            "cpf_cnpj": "CPF ou CNPJ",
+            "vehicle_plate": "Placa do veículo",
+            "phone": "Telefone",
+            "whatsapp_contact": "WhatsApp",
+            "email": "E-mail",
+            "cep_pernoite": "CEP de pernoite",
+            "profession": "Profissão",
+            "marital_status": "Estado civil",
+            "vehicle_usage": "Uso do veículo",
+            "has_young_driver": "Se tem condutor menor de 26 anos",
+            "property_cep": "CEP do imóvel",
+            "property_type": "Tipo de imóvel",
+            "property_value": "Valor aproximado",
+            "property_ownership": "Se é próprio ou alugado",
+            "consortium_type": "Tipo de consórcio",
+            "consortium_value": "Valor da carta",
+            "consortium_term": "Prazo em meses",
+            "interest": "Descrição do que precisa"
+        }
+        
+        missing_labels = [field_labels.get(f, f) for f in missing_fields]
+        
+        validation_instruction = f"\n\n⚠️ IMPORTANTE - CAMPOS OBRIGATÓRIOS FALTANTES:\n"
+        validation_instruction += "\n".join([f"- {label}" for label in missing_labels])
+        validation_instruction += "\n\nVocê DEVE coletar TODOS esses campos antes de finalizar o atendimento."
+        validation_instruction += "\nSe o cliente não fornecer alguma informação, diga: 'Esse campo é obrigatório para darmos continuidade. Por favor, me informe seu/sua [campo]'"
+        validation_instruction += "\n\nNÃO finalize o atendimento até coletar TODAS as informações!"
+        
+        base_prompt += validation_instruction
+    
+    return base_prompt

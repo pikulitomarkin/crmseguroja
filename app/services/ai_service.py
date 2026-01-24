@@ -26,7 +26,8 @@ class AIService:
         self,
         user_message: str,
         conversation_history: List[Dict],
-        flow_step: str = "menu_principal"
+        flow_step: str = "menu_principal",
+        missing_fields: list = None
     ) -> str:
         """
         Obtém resposta da OpenAI para uma mensagem do usuário
@@ -35,6 +36,7 @@ class AIService:
             user_message: Mensagem do usuário
             conversation_history: Histórico de conversas anteriores
             flow_step: Etapa atual do fluxo (menu_principal, seguro_auto, etc)
+            missing_fields: Lista de campos obrigatórios faltantes
         
         Returns:
             Resposta da IA
@@ -42,7 +44,7 @@ class AIService:
         try:
             # Formata o histórico para OpenAI
             messages = [
-                {"role": "system", "content": get_system_prompt(flow_step)}
+                {"role": "system", "content": get_system_prompt(flow_step, missing_fields)}
             ]
             
             for msg in conversation_history[-10:]:  # Últimas 10 mensagens
@@ -172,16 +174,21 @@ class AIService:
                     "profession": "profissão ou null",
                     "marital_status": "estado civil ou null",
                     "vehicle_usage": "uso do veículo (particular/trabalho) ou null",
-                    "has_young_driver": "condutor menor de 26 anos (true/false) ou null"
+                    "has_young_driver": "condutor menor de 26 anos (true/false) ou null",
+                    "interest": "observações ou informações extras mencionadas (modelo do carro, ano, cor, etc) ou null",
+                    "necessity": "necessidades ou preferências mencionadas ou null"
                 },
                 "seguro_residencial": {
                     "name": "nome completo ou null",
+                    "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
                     "phone": "telefone (apenas números) ou null",
                     "whatsapp_contact": "WhatsApp (apenas números) ou null",
+                    "email": "e-mail ou null",
                     "property_cep": "CEP do imóvel (apenas números) ou null",
                     "property_type": "tipo de imóvel ou null",
                     "property_value": "valor aproximado ou null",
-                    "property_ownership": "próprio ou alugado ou null"
+                    "property_ownership": "próprio ou alugado ou null",
+                    "interest": "observações ou informações extras mencionadas ou null"
                 },
                 "consorcio": {
                     "name": "nome completo ou null",
@@ -193,7 +200,8 @@ class AIService:
                     "consortium_type": "tipo de consórcio (auto/imovel/servico) ou null",
                     "consortium_value": "valor da carta de crédito ou null",
                     "consortium_term": "prazo em meses ou null",
-                    "has_previous_consortium": "já participou de consórcio (true/false) ou null"
+                    "has_previous_consortium": "já participou de consórcio (true/false) ou null",
+                    "interest": "preferências ou observações mencionadas ou null"
                 },
                 "segunda_via": {
                     "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
@@ -201,9 +209,21 @@ class AIService:
                 },
                 "sinistro": {
                     "name": "nome completo ou null",
+                    "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
                     "phone": "telefone (apenas números) ou null",
                     "whatsapp_contact": "WhatsApp (apenas números) ou null",
-                    "interest": "tipo de seguro ou null"
+                    "vehicle_plate": "placa do veículo ou null",
+                    "email": "e-mail ou null",
+                    "interest": "tipo de sinistro e detalhes do que aconteceu ou null",
+                    "necessity": "situação atual e urgência ou null"
+                },
+                "falar_humano": {
+                    "name": "nome completo ou null",
+                    "cpf_cnpj": "CPF ou CNPJ (apenas números) ou null",
+                    "whatsapp_contact": "WhatsApp (apenas números) ou null",
+                    "email": "e-mail ou null",
+                    "interest": "motivo do contato ou null",
+                    "necessity": "observações ou preferências ou null"
                 }
             }
             

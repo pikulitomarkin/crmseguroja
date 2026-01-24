@@ -389,22 +389,25 @@ async def process_message(whatsapp_number: str, message_text: str):
             
             db.commit()
         
-        # 7. Verifica se deve transferir para humano
-        should_transfer = flow_manager.should_transfer_to_human(current_step, flow_type, lead_dict)
+        # 7. Verifica campos obrigatórios faltantes
+        missing_fields = flow_manager.get_missing_fields(flow_type, lead_dict) if flow_type else []
         
-        if should_transfer:
-            logger.info(f"Transferindo lead {whatsapp_number}: {current_step}")
+        if missing_fields:
+            logger.info(f"[{whatsapp_number}] ⚠️ Campos obrigatórios faltantes ({len(missing_fields)}): {', '.join(missing_fields)}")
+        else:
+            logger.info(f"[{whatsapp_number}] ✅ Todos os campos obrigatórios coletados")
+        
+        # 8. Verifica se deve apenas notificar admin (outros_assuntos)
+        should_notify_only = flow_manager.should_notify_admin_only(flow_type, lead_dict)
+        
+        if should_notify_only:
+            logger.info(f"Notificando admin sobre outros assuntos de {whatsapp_number}")
             
-            # Marca como qualificado
-            LeadService.mark_qualified(db, lead)
-            db.commit()
-            
-            # Mensagem de finalização já será enviada pela IA com o prompt correto
-            # Notifica admin em background
+            # NÃO marca como qualificado, apenas notifica admin
             async def notify_admin_background(service, data, number):
                 try:
-                    await service.notify_admin_lead_qualified(data, number)
-                    logger.info(f"Admin notificado sobre lead {number}")
+                    await service.notify_admin_outros_assuntos(data, number)
+                    logger.info(f"Admin notificado sobre outros assuntos de {number}")
                 except Exception as e:
                     logger.error(f"Erro ao notificar admin: {str(e)}")
             
@@ -415,18 +418,48 @@ async def process_message(whatsapp_number: str, message_text: str):
             except Exception as e:
                 logger.error(f"Erro ao criar task de notificação: {str(e)}")
         
-        # 8. Gera resposta da IA com o prompt correto
+        # 9. Verifica se deve transferir para humano (qualificação de lead)
+        # IMPORTANTE: Só transfere se NÃO houver campos faltantes
+        should_transfer = flow_manager.should_transfer_to_human(current_step, flow_type, lead_dict)
+        
+        if should_transfer and not missing_fields:
+            logger.info(f"✅ Lead {whatsapp_number} QUALIFICADO - Todos os campos coletados: {current_step}")
+            
+            # Marca como qualificado
+            LeadService.mark_qualified(db, lead)
+            db.commit()
+            
+            # Mensagem de finalização já será enviada pela IA com o prompt correto
+            # Notifica admin em background
+            async def notify_admin_lead_background(service, data, number):
+                try:
+                    await service.notify_admin_lead_qualified(data, number)
+                    logger.info(f"Admin notificado sobre lead {number}")
+                except Exception as e:
+                    logger.error(f"Erro ao notificar admin: {str(e)}")
+            
+            try:
+                asyncio.create_task(
+                    notify_admin_lead_background(notification_service, lead_dict, whatsapp_number)
+                )
+            except Exception as e:
+                logger.error(f"Erro ao criar task de notificação: {str(e)}")
+        elif should_transfer and missing_fields:
+            logger.warning(f"⚠️ Lead {whatsapp_number} não pode ser qualificado - {len(missing_fields)} campos faltantes: {', '.join(missing_fields)}")
+        
+        # 10. Gera resposta da IA com o prompt correto (inclui campos faltantes)
         try:
             ai_response = ai_service.get_response(
                 user_message=message_text,
                 conversation_history=conversation,
-                flow_step=current_step
+                flow_step=current_step,
+                missing_fields=missing_fields if missing_fields else None
             )
         except Exception as e:
             logger.error(f"Erro ao gerar resposta IA: {str(e)}")
             ai_response = "Desculpe, tive um problema técnico. Pode repetir sua mensagem?"
         
-        # 9. Salva resposta da IA
+        # 11. Salva resposta da IA
         try:
             MessageService.save_message(
                 db, whatsapp_number, "ai", ai_response, role="assistant", lead_id=lead.id
@@ -435,7 +468,7 @@ async def process_message(whatsapp_number: str, message_text: str):
         except Exception as e:
             logger.error(f"Erro ao salvar mensagem IA: {str(e)}")
         
-        # 10. Envia resposta via WhatsApp
+        # 12. Envia resposta via WhatsApp
         try:
             evolution_service = get_evolution_service()
             await evolution_service.send_message(whatsapp_number, ai_response)

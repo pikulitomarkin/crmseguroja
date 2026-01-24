@@ -39,9 +39,11 @@ class FlowManager:
             "cpf_cnpj", "whatsapp_contact", "email",
             "consortium_type", "consortium_value", "consortium_term"
         ],
-        "segunda_via": ["name", "cpf_cnpj", "whatsapp_contact"],
+        # Para segunda via, só exige nome, cpf_cnpj e produto (interest)
+        "segunda_via": ["name", "cpf_cnpj", "interest"],
         "sinistro": ["name", "cpf_cnpj", "whatsapp_contact"],
-        "outros_assuntos": ["cpf_cnpj", "name", "whatsapp_contact", "interest"]
+        "falar_humano": ["name", "cpf_cnpj", "whatsapp_contact"],
+        "outros_assuntos": ["name", "whatsapp_contact", "interest"]
     }
     
     def detect_menu_choice(self, message: str) -> Optional[str]:
@@ -268,15 +270,57 @@ class FlowManager:
             True se deve transferir
         """
         # Fluxos que sempre transferem imediatamente
-        immediate_transfer = ["falar_humano", "sinistro", "outros_assuntos"]
+        immediate_transfer = ["sinistro"]
         if flow_step in immediate_transfer:
             return True
-        
-        # Verifica se fluxo está completo
+        # Segunda via: transfere assim que nome, cpf_cnpj e produto forem coletados
+        if flow_type == "segunda_via" and self.is_flow_complete(flow_type, lead_data):
+            return True
+        # Outros fluxos: transfere só se todos obrigatórios
         if flow_type and self.is_flow_complete(flow_type, lead_data):
             return True
-        
         return False
+    
+    def should_notify_admin_only(self, flow_type: str, lead_data: Dict) -> bool:
+        """
+        Determina se deve apenas notificar admin sem qualificar como lead
+        (usado para outros_assuntos)
+        
+        Args:
+            flow_type: Tipo de fluxo
+            lead_data: Dados coletados
+            
+        Returns:
+            True se deve apenas notificar admin
+        """
+        if flow_type == "outros_assuntos":
+            # Verifica se tem os dados mínimos para notificar
+            return bool(lead_data.get("name") and lead_data.get("whatsapp_contact") and lead_data.get("interest"))
+        return False
+    
+    def get_missing_fields(self, flow_type: str, lead_data: Dict) -> list:
+        """
+        Retorna lista de campos obrigatórios que ainda não foram coletados
+        
+        Args:
+            flow_type: Tipo de fluxo
+            lead_data: Dados coletados
+            
+        Returns:
+            Lista de nomes de campos faltantes
+        """
+        if flow_type not in self.REQUIRED_FIELDS:
+            return []
+        
+        required = self.REQUIRED_FIELDS[flow_type]
+        missing = []
+        
+        for field in required:
+            value = lead_data.get(field)
+            if not value or value in ["null", "None", ""]:
+                missing.append(field)
+        
+        return missing
     
     def get_field_label(self, field_name: str) -> str:
         """
