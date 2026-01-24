@@ -288,6 +288,25 @@ async def process_message(whatsapp_number: str, message_text: str):
         current_step = lead.flow_step or "menu_principal"
         flow_type = lead.flow_type
         
+        # Detecta se é cliente existente baseado em palavras-chave
+        existing_customer_keywords = [
+            "renovação", "renovacao", "renovar", "renova",
+            "boleto", "segunda via", "pagamento", "pagar",
+            "já tenho seguro", "ja tenho seguro", "tenho seguro",
+            "meu seguro", "minha apólice", "minha apolice",
+            "cliente", "fidelizado", "renovar meu",
+            "vencimento", "venceu", "prorrogar"
+        ]
+        
+        message_lower = message_text.lower()
+        is_existing_customer = any(keyword in message_lower for keyword in existing_customer_keywords)
+        
+        # Se detectar que é cliente existente, atualiza
+        if is_existing_customer and lead.customer_type == "novo":
+            LeadService.update_lead(db, lead, customer_type="existente")
+            db.commit()
+            logger.info(f"[{whatsapp_number}] Cliente identificado como EXISTENTE")
+        
         # Detecta se cliente quer voltar ao menu (a qualquer momento)
         if message_text.strip() in ["0", "menu", "voltar", "inicio", "Menu", "Voltar"]:
             current_step = "menu_principal"

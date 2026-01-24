@@ -15,7 +15,8 @@ class EvolutionService:
         # Garante que a URL tenha o protocolo https://
         if not base_url.startswith('http://') and not base_url.startswith('https://'):
             base_url = f'https://{base_url}'
-        self.base_url = base_url
+        # Remove barra final se existir para evitar barra dupla
+        self.base_url = base_url.rstrip('/')
         self.api_key = settings.EVOLUTION_API_KEY
         self.instance_name = settings.EVOLUTION_INSTANCE_NAME
     
