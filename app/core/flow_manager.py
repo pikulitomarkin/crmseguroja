@@ -41,7 +41,7 @@ class FlowManager:
         ],
         "segunda_via": ["name", "cpf_cnpj", "whatsapp_contact"],
         "sinistro": ["name", "cpf_cnpj", "whatsapp_contact"],
-        "outros_assuntos": ["name", "whatsapp_contact"]
+        "outros_assuntos": ["cpf_cnpj", "name", "whatsapp_contact", "interest"]
     }
     
     def detect_menu_choice(self, message: str) -> Optional[str]:
