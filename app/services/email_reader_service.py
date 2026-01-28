@@ -297,8 +297,16 @@ Resposta (SIM ou NÃO):"""
             self.db.commit()
             
             # Notifica admin via WhatsApp
+            logger.info(f"🔔 Preparando notificação para admin...")
             if settings.ADMIN_WHATSAPP:
-                await self.notify_admin_about_email(lead, subject, body[:300])
+                logger.info(f"✓ ADMIN_WHATSAPP configurado: {settings.ADMIN_WHATSAPP}")
+                notification_sent = await self.notify_admin_about_email(lead, subject, body[:300])
+                if notification_sent:
+                    logger.info(f"✅ Notificação enviada com sucesso para admin")
+                else:
+                    logger.error(f"❌ FALHA ao enviar notificação para admin")
+            else:
+                logger.warning(f"⚠️ ADMIN_WHATSAPP não configurado - notificação NÃO enviada")
             
             logger.info(f"✅ E-mail processado com sucesso: {sender_email}")
             return True
@@ -324,6 +332,15 @@ Resposta (SIM ou NÃO):"""
             body_preview: Preview do corpo
         """
         try:
+            logger.info(f"🔔 Iniciando notificação do admin sobre lead de e-mail: {lead.email}")
+            
+            # Verifica se o número do admin está configurado
+            if not settings.ADMIN_WHATSAPP:
+                logger.warning("⚠️ ADMIN_WHATSAPP não configurado - notificação não enviada")
+                return False
+            
+            logger.info(f"📱 Número do admin: {settings.ADMIN_WHATSAPP}")
+            
             message = f"""🔔 *NOVO LEAD VIA E-MAIL*
 
 📧 *E-mail:* {lead.email}
@@ -337,11 +354,24 @@ Resposta (SIM ou NÃO):"""
 💡 Lead capturado automaticamente do e-mail
 🆔 ID do Lead: {lead.id}"""
             
-            await self.evolution.send_message(settings.ADMIN_WHATSAPP, message)
-            logger.info(f"✅ Admin notificado sobre lead de e-mail: {lead.email}")
+            logger.info(f"📨 Tentando enviar mensagem para admin...")
+            logger.info(f"📝 Tamanho da mensagem: {len(message)} caracteres")
+            
+            # Usa send_notification ao invés de send_message (mais apropriado para notificações)
+            success = await self.evolution.send_notification(settings.ADMIN_WHATSAPP, message)
+            
+            if success:
+                logger.info(f"✅ Admin notificado com SUCESSO sobre lead de e-mail: {lead.email}")
+                return True
+            else:
+                logger.error(f"❌ FALHA ao notificar admin sobre lead de e-mail: {lead.email}")
+                return False
         
         except Exception as e:
-            logger.error(f"❌ Erro ao notificar admin: {str(e)}")
+            logger.error(f"❌ EXCEÇÃO ao notificar admin: {str(e)}")
+            import traceback
+            logger.error(f"Traceback completo:\n{traceback.format_exc()}")
+            return False
     
     async def read_and_process_emails(self, max_emails: int = 10) -> int:
         """
